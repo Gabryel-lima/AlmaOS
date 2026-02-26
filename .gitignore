@@ -1,0 +1,22 @@
+# Ignore build artifacts
+/build/
+
+# Object files
+*.o
+
+# Assembler listings or temp files
+*.lst
+*.log
+
+# Backup files
+*~
+
+# Editor directories
+.vscode/
+.idea/
+
+# MacOS
+.DS_Store
+
+# Linux
+*~
