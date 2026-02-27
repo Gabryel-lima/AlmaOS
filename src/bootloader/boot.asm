@@ -42,6 +42,14 @@ main:
     mov ss, ax        ; Segmento de pilha é definido como 0
     mov sp, 0x7C00    ; Pilha cresce para baixo a partir do final do bootloader
 
+    ; lê algo do floppy disk
+    ; BIOS deve definir DL para o número do driver
+    mov [ebr_drive_number], dl ; Armazena o número do drive no EBR para uso posterior
+    mov ax, 1         ; LBA do setor a ser lido (setor 1, logo após o bootloader)
+    mov cl, 1         ; Número de setores a ler
+    mov bx, 0x7E00    ; Buffer de destino para a leitura (logo após o bootloader)
+    call disk_read    ; Chama a função para ler do disco
+
     mov si, msg_boot  ; Carrega o endereço da string em SI
     call puts         ; Chama a função puts para imprimir a string
 
@@ -104,88 +112,98 @@ puts:
 ;       cilindro = LBA / (setores_por_trilha * cabeças)
 lba_to_chs:
     ; Salva os registradores usados por esta rotina
-    push ax         ; Salva EAX, EBX, ECX
+    push ax         ; Salva AX (LBA originário)
     push dx         ; Salva DX
 
     ; Calcula o setor (DL)
-    xor dx, dx      ; Limpa DX para armazenar o resultado
+    xor dx, dx      ; Limpa DX para a divisão de 32 bits (AX:DX / divisor)
     div word [bdb_sectors_per_track]      ; Divide LBA por setores por trilha
 
-    ; O resultado da divisão está em AX (cylinders) e DX (remainder)
-    inc dx          ; Setores começam em 1, então incrementamos o resultado
-    mov cx, dx      ; Armazena o setor em CX para uso posterior
+    ; O resultado da divisão está em AX (LBA / SPT) e DX (LBA % SPT)
+    inc dx          ; Setores começam em 1, então incrementamos o resto
+    mov cx, dx      ; Armazena o setor em CX temporariamente
 
-    ; Calcula a cabeça (DH)
-    xor dx, dx      ; Limpa DX para armazenar o resultado da próxima divisão
-    div word [bdb_heads]      ; Divide o resultado anterior por cabeças
+    ; Calcula a cabeça (DH) e cilindro (CH)
+    xor dx, dx      ; Limpa DX para a próxima divisão
+    div word [bdb_heads]      ; Divide (LBA / SPT) por cabeças
 
-    ; O resultado da divisão está em AX (cylinders) e DX (remainder)
+    ; Resultado em AX (cilindro) e DX (cabeça)
     mov dh, dl      ; Armazena a cabeça em DH
-    mov ch, al      ; Armazena o cilindro em CH
-    shl ah, 6       ; O cilindro é armazenado em CH, mas os bits mais altos vão para AH
-    or cl, ah       ; Combina os bits do cilindro em CL
+    mov ch, al      ; Armazena o cilindro (bits baixos) em CH
+    shl ah, 6       ; Desloca bits altos do cilindro
+    or cl, al       ; Cilindro bits altos no CL (junto com setor)
 
     ; Restaura os registradores e retorna
-    pop ax          ; Restaura EAX, EBX, ECX
-    mov dl, al      ; O setor está em AL, então movemos para DL
-    pop ax          ; Restaura EAX, EBX, ECX 
+    pop ax          ; Recupera DX original (não usado no retorno, apenas para equilíbrio)
+    mov dl, cl      ; Coloca o setor calculado em DL
+    pop ax          ; Restaura o AX original
     ret             ; Retorna ao chamador
 
 ;
 ; Lê setores do disco usando a interrupção 0x13 do BIOS.
 ; Parâmetros:
 ;   - ax: endereço LBA do setor a ser lido
-;   - cx: número de setores a ler (até 128)
-;   - es: segmento do buffer de destino
 ;   - bx: deslocamento do buffer de destino
+;   - cl: número de setores a ler
+;   - dl: número do drive
 ; Retorna:
 ;   - CF setado em caso de erro, com o código de erro em AX
 ;   - CF limpo em caso de sucesso
 disk_read:
-    push ax        ; Salva AX, que contém o endereço LBA
-    push bx        ; Salva BX, que contém o deslocamento do buffer
-    push cx        ; Salva CX, que contém o número de setores a ler
-    push dx        ; Salva DX, que será usado para armazenar os valores de cilindro, cabeça e setor
+    push ax        ; Salva AX (LBA)
+    push bx        ; Salva BX (Buffer)
+    push cx        ; Salva CX (Setores)
+    push dx        ; Salva DX (Drive)
+    push di        ; Salva DI
 
-    push cx        ; Salva CX, que contém o número de setores a ler
-    call lba_to_chs  ; <-- Descrição na função
-    pop ax         ; Restaura CX, que contém o número de setores a ler
-
+    push cx        ; Salva CX temporariamente
+    call lba_to_chs  ; Converte LBA para CHS
+    pop ax         ; AL = número de setores para a interrupção 0x13
+    
     mov ah, 0x02   ; Função de leitura de setores do BIOS
-    int 0x13       ; Chama a interrupção do BIOS para ler do disco
-    mov di, 3      ; O setor 0 é o bootloader, então começamos a ler a partir do setor 1
+    mov di, 3      ; Contador de tentativas
 
 .retry:
-    pusha          ; Salva todos os registradores
-    stc            ; Seta o flag de carry para indicar que estamos tentando ler
+    pusha          ; Salva todos os registradores para a tentativa
+    stc            ; Seta o flag de carry
     int 0x13       ; Tenta ler do disco
     jnc .done      ; Se não houve erro, terminamos
 
     ; Se houve um erro, tentamos novamente
-    popa           ; Restaura os registradores
+    popa           ; Restaura os registradores da tentativa
     call disk_reset  ; Tenta resetar o controlador de disco
 
-    dec di         ; Decrementa o setor para tentar ler novamente
-    test di, di    ; Verifica se já tentamos ler o setor 0
-    jnz .retry     ; Se ainda não tentamos o setor 0, tenta novamente
+    dec di         ; Decrementa o contador de tentativas
+    test di, di    ; Verifica se ainda há tentativas
+    jnz .retry     ; Tenta novamente se di > 0
 
 .fail:
-    jmp floppy_error  ; Se falhamos ao ler o setor 0, mostramos uma mensagem de erro
+    jmp floppy_error  ; Se falhou após 3 tentativas
 
 .done:
-    popa           ; Restaura os registradores
-
-    push ax        ; Salva AX, que contém o endereço LBA
-    push bx        ; Salva BX, que contém o deslocamento do buffer
-    push cx        ; Salva CX, que contém o número de setores a ler
-    push dx        ; Salva DX, que será usado para armazenar os valores de cilindro, cabeça e setor
+    popa           ; Restaura os registradores da última tentativa (sucesso)
+    pop di         ; Restaura registradores na ordem inversa
+    pop dx         ; Restaura DX
+    pop cx         ; Restaura CX
+    pop bx         ; Restaura BX
+    pop ax         ; Restaura AX
     ret            ; Retorna ao chamador
 
 ;
-; Reinicio de disco
-;
+; Reinicio de disco controlador usando a função de reset do BIOS.
+; Parâmetros:
+;   - dl: número do drive (0x00 para disquete, 0x80 para HD)
+; Retorna:
+;   - CF setado em caso de erro, com o código de erro em AX
+;   - CF limpo em caso de sucesso
 disk_reset:
-    
+    pusha           ; Salva todos os registradores
+    mov ah, 0       ; Função de reset do BIOS para o controlador de disco
+    stc             ; Seta o flag de carry para indicar que estamos tentando resetar
+    int 0x13        ; Chama a interrupção do BIOS para resetar o controlador de disco
+    jc floppy_error ; Se o reset falhar, mostramos uma mensagem de erro
+    popa            ; Restaura os registradores
+    ret             ; Retorna ao chamador
 
 msg_boot:            ; A mensagem de boas-vindas do bootloader, seguida por um terminador nulo
     db 'AlmaOS Bootloader...', ENDL, 0         ; A string seguida por um terminador nulo
