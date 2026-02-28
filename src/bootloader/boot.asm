@@ -32,6 +32,9 @@ ebr_volume_id:              db 0x12, 0x34, 0x56, 0x78   ; ID do volume (número 
 ebr_volume_label:           db 'ALMA OS :) '        ; Rótulo do volume (Exatamente 11 bytes, completar com espaços)
 ebr_system_id:              db 'FAT12   '           ; Tipo do sistema de arquivos (Exatamente 8 bytes)
 
+;
+; O código vai aqui
+;
 main:
     ; Configura os registradores de segmento e o ponteiro de pilha.
     mov ax, 0         ; Define AX como 0, que será usado para os registradores de segmento
@@ -53,48 +56,57 @@ main:
     mov si, msg_boot  ; Carrega o endereço da string em SI
     call puts         ; Chama a função puts para imprimir a string
 
+    cli               ; Desabilita interrupções para evitar que o sistema seja interrompido
     hlt               ; Para a CPU por enquanto (o bootloader ainda não carrega o kernel)
 
 ;
 ; Erros de cabeçalho do disco ou falhas de leitura
-;
-
+; Parâmetros:
+;   - SI: endereço da mensagem de erro a ser exibida
+; A rotina irá imprimir a mensagem de erro e aguardar o usuário pressionar uma tecla antes
 floppy_error:
     mov si, msg_read_failed   ; Carrega o endereço da mensagem de erro em SI 
     call puts                 ; Chama a função puts para imprimir a mensagem de erro
-    jmp_wait_key_and_reboot   ; Loop para esperar por uma tecla e reiniciar o sistema
+    jmp jmp_wait_key_and_reboot ; Aguarda o usuário pressionar uma tecla e reinicia o sistema
 
+;
+; Imprime uma string na tela usando interrupções do BIOS.
+; A string deve ser terminada com nulo. (bootloader)
+puts:
+    push ax          ; salva registradores usados por esta rotina
+    push si          ; salva o índice da string
+
+;
+; Rotina de impressão de string para o bootloader, que é chamada tanto para a mensagem de boas-vindas quanto para mensagens de erro
+; Parâmetros:
+;   - SI: endereço da string a ser impressa
+; A rotina irá imprimir a string na tela usando a função de saída teletipo do BIOS
+; Retorna:
+;   - Retorna ao chamador após imprimir a string
 jmp_wait_key_and_reboot:
     mov ah, 0                 ; Função de leitura de tecla do BIOS
     int 0x16                  ; Chama a interrupção do BIOS para ler uma tecla
     jmp 0FFFFh:0              ; Reinicia o sistema pulando para o endereço de reset
     hlt                       ; Para a CPU e espera por uma tecla
 
-.halt:
-    cli         ; Desabilita interrupções para evitar que o sistema seja interrompido
-    hlt         ; Para a CPU e espera por uma interrupção (que nunca virá, pois as interrupções estão desabilitadas)
+    .halt:
+        cli         ; Desabilita interrupções para evitar que o sistema seja interrompido
+        hlt         ; Para a CPU e espera por uma interrupção (que nunca virá, pois as interrupções estão desabilitadas)
 
-;
-; Imprime uma string na tela usando interrupções do BIOS.
-; A string deve ser terminada com nulo. (boot)
-puts:
-    push ax          ; salva registradores usados por esta rotina
-    push si          ; salva o índice da string
+    .loop:
+        lodsb            ; carrega o próximo byte da string em AL
+        or al, al        ; zero? fim da string
+        jz .done         ; se sim, terminamos
 
-.loop:
-    lodsb            ; carrega o próximo byte da string em AL
-    or al, al        ; zero? fim da string
-    jz .done         ; se sim, terminamos
+        mov ah, 0x0E     ; saída teletipo do BIOS
+        mov bh, 0x00     ; página 0
+        int 0x10         ; imprime AL
+        jmp .loop        ; continua com o próximo caractere
 
-    mov ah, 0x0E     ; saída teletipo do BIOS
-    mov bh, 0x00     ; página 0
-    int 0x10         ; imprime AL
-    jmp .loop        ; continua com o próximo caractere
-
-.done:
-    pop si           ; restaura registradores
-    pop ax
-    ret              ; retorna ao chamador
+    .done:
+        pop si           ; restaura registradores
+        pop ax           ; restaura AX
+        ret              ; retorna ao chamador
 
 ;
 ; Rotinas de disco
@@ -131,11 +143,10 @@ lba_to_chs:
     mov dh, dl      ; Armazena a cabeça em DH
     mov ch, al      ; Armazena o cilindro (bits baixos) em CH
     shl ah, 6       ; Desloca bits altos do cilindro
-    or cl, al       ; Cilindro bits altos no CL (junto com setor)
+    or cl, ah       ; Combina os bits altos do cilindro com o setor (bits baixos)
 
     ; Restaura os registradores e retorna
-    pop ax          ; Recupera DX original (não usado no retorno, apenas para equilíbrio)
-    mov dl, cl      ; Coloca o setor calculado em DL
+    pop dx          ; Restaura DX
     pop ax          ; Restaura o AX original
     ret             ; Retorna ao chamador
 
@@ -163,31 +174,31 @@ disk_read:
     mov ah, 0x02   ; Função de leitura de setores do BIOS
     mov di, 3      ; Contador de tentativas
 
-.retry:
-    pusha          ; Salva todos os registradores para a tentativa
-    stc            ; Seta o flag de carry
-    int 0x13       ; Tenta ler do disco
-    jnc .done      ; Se não houve erro, terminamos
+    .retry:
+        pusha          ; Salva todos os registradores para a tentativa
+        stc            ; Seta o flag de carry
+        int 0x13       ; Tenta ler do disco
+        jnc .done      ; Se não houve erro, terminamos
 
-    ; Se houve um erro, tentamos novamente
-    popa           ; Restaura os registradores da tentativa
-    call disk_reset  ; Tenta resetar o controlador de disco
+        ; Se houve um erro, tentamos novamente
+        popa           ; Restaura os registradores da tentativa
+        call disk_reset  ; Tenta resetar o controlador de disco
 
-    dec di         ; Decrementa o contador de tentativas
-    test di, di    ; Verifica se ainda há tentativas
-    jnz .retry     ; Tenta novamente se di > 0
+        dec di         ; Decrementa o contador de tentativas
+        test di, di    ; Verifica se ainda há tentativas
+        jnz .retry     ; Tenta novamente se di > 0
 
-.fail:
-    jmp floppy_error  ; Se falhou após 3 tentativas
+    .fail:
+        jmp floppy_error  ; Se falhou após 3 tentativas
 
-.done:
-    popa           ; Restaura os registradores da última tentativa (sucesso)
-    pop di         ; Restaura registradores na ordem inversa
-    pop dx         ; Restaura DX
-    pop cx         ; Restaura CX
-    pop bx         ; Restaura BX
-    pop ax         ; Restaura AX
-    ret            ; Retorna ao chamador
+    .done:
+        popa           ; Restaura os registradores da última tentativa (sucesso)
+        pop di         ; Restaura registradores na ordem inversa
+        pop dx         ; Restaura DX
+        pop cx         ; Restaura CX
+        pop bx         ; Restaura BX
+        pop ax         ; Restaura AX
+        ret            ; Retorna ao chamador
 
 ;
 ; Reinicio de disco controlador usando a função de reset do BIOS.

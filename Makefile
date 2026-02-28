@@ -6,7 +6,7 @@ SRC_DIR=src
 BUILD_DIR=build
 
 # Declare phony targets to avoid conflicts with files of the same name
-.PHONY: all bootloader kernel run clean help
+.PHONY: all bootloader kernel run debug clean help
 
 #
 # Default target: build a floppy FAT12 image containing bootloader + kernel
@@ -28,10 +28,10 @@ $(BUILD_DIR)/kernel.bin: $(SRC_DIR)/kernel/main.asm | $(BUILD_DIR)
 
 # create a 1.44-MB FAT12 floppy image and copy the bootloader + kernel into it
 $(FLOPPY): $(BUILD_DIR)/boot.bin $(BUILD_DIR)/kernel.bin
-	dd if=/dev/zero bs=512 count=2880 of=$@        # 1.44-MB blank image
-	mkfs.fat -F12 $@
-	dd if=$(BUILD_DIR)/boot.bin conv=notrunc count=1 bs=512 of=$@
+	dd if=/dev/zero bs=512 count=2880 of=$@
+	mkfs.fat -F12 -n "ALMAOS" $@
 	mcopy -i $@ $(BUILD_DIR)/kernel.bin ::/kernel.bin
+	dd if=$(BUILD_DIR)/boot.bin conv=notrunc of=$@
 
 # separate targets for bootloader and kernel
 bootloader: $(BUILD_DIR)/boot.bin
@@ -40,6 +40,10 @@ kernel: $(BUILD_DIR)/kernel.bin
 # run in QEMU
 run: $(FLOPPY)
 	qemu-system-i386 -fda $<
+
+# run in Bochs
+debug: $(FLOPPY)
+	bochs -f bochs_config
 
 # housekeeping
 clean:
@@ -52,5 +56,6 @@ help:
 	@echo "  make kernel   - build the kernel binary"
 	@echo "  make bootloader - build the bootloader binary"
 	@echo "  make run      - run the floppy image in QEMU"
+	@echo "  make debug    - run the floppy image in Bochs"
 	@echo "  make clean    - clean the build directory"
 	@echo "  make help     - display this help message"
