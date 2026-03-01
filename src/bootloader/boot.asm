@@ -10,27 +10,47 @@ bits 16              ; Estamos escrevendo código de 16 bits para a arquitetura 
 jmp short main       ; Pula para o início do código principal, ignorando o BPB
 nop                  ; Instrução NOP para preencher o espaço entre o JMP e o início do BPB, garantindo que o BPB esteja no local correto
 
-bdb_oem:                    db 'MSWIN4.1'           ; Nome do fabricante (8 bytes)
-bdb_bytes_per_sector:       dw 512                  ; Bytes por setor
-bdb_sectors_per_cluster:    db 1                    ; Setores por cluster
-bdb_reserved_sectors:       dw 1                    ; Setores reservados (geralmente 1 para o bootloader)
-bdb_fat_count:              db 2                    ; Quantidade de tabelas FAT
-bdb_dir_entries_count:      dw 224                  ; Número de entradas no diretório raiz
-bdb_total_sectors:          dw 2880                 ; Total de setores no disco (1.44MB = 2880 * 512 bytes)
-bdb_media_descriptor_type:  db 0xF0                 ; Tipo de mídia (F0 = Disquete 3.5")
-bdb_sectors_per_fat:        dw 9                    ; Setores por cada tabela FAT
-bdb_sectors_per_track:      dw 18                   ; Setores por trilha
-bdb_heads:                  dw 2                    ; Número de cabeças (lados do disquete)
-bdb_hidden_sectors:         dd 0                    ; Setores ocultos
-bdb_large_sector_count:     dd 0                    ; Contador de setores grandes (usado se total_sectors for 0)
+; O BPB (BIOS Parameter Block) contém informações sobre a estrutura do sistema de arquivos FAT12 no disquete
+; Nome do fabricante (8 bytes)
+bdb_oem:                    db 'MSWIN4.1'
+; Bytes por setor           
+bdb_bytes_per_sector:       dw 512
+; Setores por cluster
+bdb_sectors_per_cluster:    db 1                    
+; Setores reservados (geralmente 1 para o bootloader)
+bdb_reserved_sectors:       dw 1                    
+; Quantidade de tabelas FAT
+bdb_fat_count:              db 2                    
+; Número de entradas no diretório raiz
+bdb_dir_entries_count:      dw 224                  
+; Total de setores no disco (1.44MB = 2880 * 512 bytes)
+bdb_total_sectors:          dw 2880                 
+; Tipo de mídia (F0 = Disquete 3.5")
+bdb_media_descriptor_type:  db 0xF0                 
+; Setores por cada tabela FAT
+bdb_sectors_per_fat:        dw 9                    
+; Setores por trilha
+bdb_sectors_per_track:      dw 18                   
+; Número de cabeças (lados do disquete)
+bdb_heads:                  dw 2                    
+; Setores ocultos
+bdb_hidden_sectors:         dd 0                    
+; Contador de setores grandes (usado se total_sectors for 0)
+bdb_large_sector_count:     dd 0                    
 
 ; Registro de Boot Estendido (Extended Boot Record)
-ebr_drive_number:           db 0                    ; Número do drive (0x00 para disquete, 0x80 para HD)
-                            db 0                    ; Reservado (usado pelo Windows NT)
-ebr_signature:              db 0x29                 ; Assinatura do EBR (0x28 ou 0x29)
-ebr_volume_id:              db 0x12, 0x34, 0x56, 0x78   ; ID do volume (número de série aleatório)
-ebr_volume_label:           db 'ALMA OS :) '        ; Rótulo do volume (Exatamente 11 bytes, completar com espaços)
-ebr_system_id:              db 'FAT12   '           ; Tipo do sistema de arquivos (Exatamente 8 bytes)
+; Número do drive (0x00 para disquete, 0x80 para HD)
+ebr_drive_number:           db 0                    
+; Reservado (usado pelo Windows NT)
+                            db 0                    
+; Assinatura do EBR (0x28 ou 0x29)
+ebr_signature:              db 0x29                 
+; ID do volume (número de série aleatório)
+ebr_volume_id:              db 0x12, 0x34, 0x56, 0x78   
+; Rótulo do volume (Exatamente 11 bytes, completar com espaços)
+ebr_volume_label:           db 'ALMA OS :) '        
+; Tipo do sistema de arquivos (Exatamente 8 bytes)
+ebr_system_id:              db 'FAT12   '           
 
 ;
 ; O código vai aqui
