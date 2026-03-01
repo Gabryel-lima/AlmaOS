@@ -17,9 +17,6 @@ puts:
     push ax          ; salva registradores usados por esta rotina
     push si          ; salva o índice da string
 
-    .halt:
-        jmp .halt        ; Trava a execução do kernel aqui
-
     .loop:
         lodsb            ; carrega o próximo byte da string em AL
         or al, al        ; zero? fim da string

@@ -70,13 +70,6 @@ floppy_error:
     jmp jmp_wait_key_and_reboot ; Aguarda o usuário pressionar uma tecla e reinicia o sistema
 
 ;
-; Imprime uma string na tela usando interrupções do BIOS.
-; A string deve ser terminada com nulo. (bootloader)
-puts:
-    push ax          ; salva registradores usados por esta rotina
-    push si          ; salva o índice da string
-
-;
 ; Rotina de impressão de string para o bootloader, que é chamada tanto para a mensagem de boas-vindas quanto para mensagens de erro
 ; Parâmetros:
 ;   - SI: endereço da string a ser impressa
@@ -89,9 +82,12 @@ jmp_wait_key_and_reboot:
     jmp 0FFFFh:0              ; Reinicia o sistema pulando para o endereço de reset
     hlt                       ; Para a CPU e espera por uma tecla
 
-    .halt:
-        cli         ; Desabilita interrupções para evitar que o sistema seja interrompido
-        hlt         ; Para a CPU e espera por uma interrupção (que nunca virá, pois as interrupções estão desabilitadas)
+;
+; Imprime uma string na tela usando interrupções do BIOS.
+; A string deve ser terminada com nulo. (bootloader)
+puts:
+    push ax          ; salva registradores usados por esta rotina
+    push si          ; salva o índice da string
 
     .loop:
         lodsb            ; carrega o próximo byte da string em AL
