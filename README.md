@@ -56,7 +56,15 @@ Alternativamente, você pode criar o arquivo [.vscode/c_cpp_properties.json](.vs
                 "${default}"
             ],
             "defines": [
-                "_cdecl="
+                "_cdecl=",
+                "far=",
+                "near=",
+                "huge=",
+                "__far=",
+                "__near=",
+                "__huge=",
+                "__interrupt=",
+                "__watcall="
             ],
             "compilerPath": "/usr/bin/watcom/binl/wcc",
             "cStandard": "c99",

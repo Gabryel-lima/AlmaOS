@@ -20,3 +20,7 @@
 
 # Linux
 *~
+
+# Error logs
+*.log
+*.err
