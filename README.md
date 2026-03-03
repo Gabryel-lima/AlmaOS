@@ -16,6 +16,13 @@ Além das ferramentas acima, é necessário o **Open Watcom v2**. Ele é essenci
 
 Você pode baixar a versão mais recente em: [Open Watcom v2 Tags](https://github.com/open-watcom/open-watcom-v2/releases/tag/2021-02-04-Build/open-watcom-2_0-c-linux-x64)
 
+A instalação é feita com os comandos:
+
+```bash
+chmod +x open-watcom-2_0-c-linux-x64
+sudo ./open-watcom-2_0-c-linux-x64
+```
+
 - O `okteta` é opcional, mas recomendado para inspecionar a imagem do disco gerada.
 
 ### Detalhes das Ferramentas:
