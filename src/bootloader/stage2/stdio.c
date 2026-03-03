@@ -19,15 +19,96 @@ void putc(char c) {
     x86_Video_WriteCharTeletype(c, 0);
 }
 
+static uint32_t g_Utf32State = 0;
+static uint32_t g_Utf32Char = 0;
+
+void putc_utf8(char c) {
+    uint8_t b = (uint8_t)c;
+
+    if (b < 0x80) {
+        g_Utf32State = 0;
+        putc(c);
+    } else if (g_Utf32State == 0) {
+        if ((b & 0xE0) == 0xC0) {
+            g_Utf32Char = b & 0x1F;
+            g_Utf32State = 1;
+        } else if ((b & 0xF0) == 0xE0) {
+            g_Utf32Char = b & 0x0F;
+            g_Utf32State = 2;
+        } else if ((b & 0xF8) == 0xF0) {
+            g_Utf32Char = b & 0x07;
+            g_Utf32State = 3;
+        }
+    } else {
+        g_Utf32Char = (g_Utf32Char << 6) | (b & 0x3F);
+        g_Utf32State--;
+        if (g_Utf32State == 0) {
+            putwc((uint16_t)g_Utf32Char);
+        }
+    }
+}
+
 void puts(const char* str){
     while(*str) {
-        putc(*str++);
+        putc_utf8(*str++);
     }
 }
 
 void puts_f(const char far* str) {
     while(*str) {
-        putc(*str++);
+        putc_utf8(*str++);
+    }
+}
+
+void putwc(uint16_t c) {
+    if (c < 0x80) {
+        putc((char)c);
+    } else {
+        // Mapeamento básico para caracteres acentuados comuns (UTF-16 -> CP437)
+        // Isso pode ser expandido conforme necessário
+        switch (c) {
+            case 0x00C4: putc(0x8E); break; // Ä
+            case 0x00C5: putc(0x8F); break; // Å
+            case 0x00C7: putc(0x80); break; // Ç
+            case 0x00C9: putc(0x90); break; // É
+            case 0x00D1: putc(0xA5); break; // Ñ
+            case 0x00D6: putc(0x99); break; // Ö
+            case 0x00DC: putc(0x9A); break; // Ü
+            case 0x00E1: putc(0xA0); break; // á
+            case 0x00E0: putc(0x85); break; // à
+            case 0x00E2: putc(0x83); break; // â
+            case 0x00E4: putc(0x84); break; // ä
+            case 0x00E3: putc(0x84); break; // ã (mapeado para ä se faltar em alguns modos, mas CP437 não tem ã)
+            case 0x00E5: putc(0x86); break; // å
+            case 0x00E7: putc(0x87); break; // ç
+            case 0x00E9: putc(0x82); break; // é
+            case 0x00E8: putc(0x8A); break; // è
+            case 0x00EA: putc(0x88); break; // ê
+            case 0x00EB: putc(0x89); break; // ë
+            case 0x00ED: putc(0xA1); break; // í
+            case 0x00EC: putc(0x8D); break; // ì
+            case 0x00EE: putc(0x8C); break; // î
+            case 0x00EF: putc(0x8B); break; // ï
+            case 0x00F1: putc(0xA4); break; // ñ
+            case 0x00F3: putc(0xA2); break; // ó
+            case 0x00F2: putc(0x95); break; // ò
+            case 0x00F4: putc(0x93); break; // ô
+            case 0x00F6: putc(0x94); break; // ö
+            case 0x00FA: putc(0xA3); break; // ú
+            case 0x00F9: putc(0x97); break; // ù
+            case 0x00FB: putc(0x96); break; // û
+            case 0x00FC: putc(0x81); break; // ü
+            case 0x00F5: putc(0x94); break; // õ (mapeado para ö/0x94 pois CP437 não tem õ)
+            case 0x00C3: putc(0x8E); break; // Ã (mapeado para Ä/0x8E)
+            case 0x00D5: putc(0x99); break; // Õ (mapeado para Ö/0x99)
+            default:   putc('?');    break;
+        }
+    }
+}
+
+void putws(const uint16_t* str) {
+    while (*str) {
+        putwc(*str++);
     }
 }
 
@@ -63,7 +144,7 @@ void _cdecl printf(const char* fmt, ...) {
                         state = PRINTF_STATE_LENGTH;
                         break;
                     default:    
-                        putc(*fmt);
+                        putc_utf8(*fmt);
                         break;
                 }
                 break;
@@ -103,7 +184,12 @@ void _cdecl printf(const char* fmt, ...) {
             PRINTF_STATE_SPEC_:
                 switch (*fmt) {
                     case 'c':   
-                        putc((char)*argp);
+                        putc_utf8((char)*argp);
+                        argp++;
+                        break;
+
+                    case 'C': // %C para caracteres UTF-16
+                        putwc((uint16_t)*argp);
                         argp++;
                         break;
 
@@ -118,8 +204,13 @@ void _cdecl printf(const char* fmt, ...) {
                         }
                         break;
 
+                    case 'S': // %S para strings UTF-16 (wide strings)
+                        putws(*(const uint16_t**)argp);
+                        argp++;
+                        break;
+
                     case '%':   
-                        putc('%');
+                        putc_utf8('%');
                         break;
 
                     case 'd':
@@ -233,7 +324,7 @@ static int* printf_number(int* argp, int length, bool sign, int radix) {
 
     // imprimir o número em ordem reversa
     while (--pos >= 0)
-        putc(buffer[pos]);
+        putc_utf8(buffer[pos]);
 
     return argp;
 }

@@ -2,8 +2,8 @@ bits 16         ; Continuamos em modo real de 16 bits
 
 section _ENTRY class=CODE ; Seção de código para o ponto de entrada do bootloader
 
-extern _cstart ; Declaração da função _cstart, que é a função principal do bootloader escrita em C 
-global entry ; Define o símbolo 'entry' como global para que o linker possa encontrá-lo (main)
+extern _cstart 
+global entry
 
 entry:
     ; Configura o segmento de pilha e o ponteiro de base para o modo protegido

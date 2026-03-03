@@ -1,21 +1,18 @@
-
 // Inclusão das bibliotecas padrão de C
 #include <stdio.h>      // Funções de entrada/saída
 #include <stdint.h>     // Tipos inteiros com tamanho fixo
 #include <stdlib.h>     // Funções utilitárias (malloc, free, etc)
 #include <string.h>     // Manipulação de strings e memória
 #include <ctype.h>      // Funções para verificação de caracteres
-
+#include <stddef.h>     // Definições de tipos padrão (size_t, NULL, etc)
 
 // Definição do tipo booleano usando uint8_t
 typedef uint8_t bool;
 #define true 1   // Valor verdadeiro
 #define false 0  // Valor falso
 
-
 // Estrutura que representa o setor de boot da FAT
-typedef struct 
-{
+typedef struct  {
     uint8_t BootJumpInstruction[3]; // Instrução de salto do boot
     uint8_t OemIdentifier[8];       // Identificador OEM
     uint16_t BytesPerSector;        // Bytes por setor
@@ -45,8 +42,7 @@ typedef struct
 
 
 // Estrutura que representa uma entrada de diretório na FAT
-typedef struct 
-{
+typedef struct {
     uint8_t Name[11];           // Nome do arquivo (8.3)
     uint8_t Attributes;         // Atributos do arquivo
     uint8_t _Reserved;          // Reservado
@@ -61,7 +57,6 @@ typedef struct
     uint32_t Size;              // Tamanho do arquivo em bytes
 } __attribute__((packed)) DirectoryEntry; // packed: sem alinhamento
 
-
 // Variáveis globais para armazenar dados do disco
 BootSector g_BootSector;              // Setor de boot
 uint8_t* g_Fat = NULL;                // Tabela FAT
@@ -69,16 +64,13 @@ DirectoryEntry* g_RootDirectory = NULL; // Diretório raiz
 uint32_t g_RootDirectoryEnd;          // LBA do fim do diretório raiz
 
 // Lê o setor de boot do disco
-bool readBootSector(FILE* disk)
-{
+bool readBootSector(FILE* disk) {
     // Lê os bytes do setor de boot para a estrutura g_BootSector
     return fread(&g_BootSector, sizeof(g_BootSector), 1, disk) > 0;
 }
 
-
 // Lê setores do disco a partir de um LBA
-bool readSectors(FILE* disk, uint32_t lba, uint32_t count, void* bufferOut)
-{
+bool readSectors(FILE* disk, uint32_t lba, uint32_t count, void* bufferOut) {
     bool ok = true; // Variável de controle
     // Move o ponteiro do arquivo para o setor desejado
     ok = ok && (fseek(disk, lba * g_BootSector.BytesPerSector, SEEK_SET) == 0);
@@ -87,20 +79,16 @@ bool readSectors(FILE* disk, uint32_t lba, uint32_t count, void* bufferOut)
     return ok;
 }
 
-
 // Lê a tabela FAT do disco
-bool readFat(FILE* disk)
-{
+bool readFat(FILE* disk) {
     // Aloca memória para a FAT
     g_Fat = (uint8_t*) malloc(g_BootSector.SectorsPerFat * g_BootSector.BytesPerSector);
     // Lê os setores da FAT para a memória
     return readSectors(disk, g_BootSector.ReservedSectors, g_BootSector.SectorsPerFat, g_Fat);
 }
 
-
 // Lê o diretório raiz do disco
-bool readRootDirectory(FILE* disk)
-{
+bool readRootDirectory(FILE* disk) {
     // Calcula o LBA inicial do diretório raiz
     uint32_t lba = g_BootSector.ReservedSectors + g_BootSector.SectorsPerFat * g_BootSector.FatCount;
     // Calcula o tamanho total do diretório raiz
@@ -117,13 +105,10 @@ bool readRootDirectory(FILE* disk)
     return readSectors(disk, lba, sectors, g_RootDirectory);
 }
 
-
 // Procura um arquivo pelo nome no diretório raiz
-DirectoryEntry* findFile(const char* name)
-{
+DirectoryEntry* findFile(const char* name) {
     // Percorre todas as entradas do diretório raiz
-    for (uint32_t i = 0; i < g_BootSector.DirEntryCount; i++)
-    {
+    for (uint32_t i = 0; i < g_BootSector.DirEntryCount; i++) {
         // Compara o nome do arquivo (11 bytes)
         if (memcmp(name, g_RootDirectory[i].Name, 11) == 0)
             return &g_RootDirectory[i]; // Retorna o ponteiro para a entrada
@@ -132,10 +117,8 @@ DirectoryEntry* findFile(const char* name)
     return NULL; // Não encontrado
 }
 
-
 // Lê o conteúdo de um arquivo a partir de sua entrada de diretório
-bool readFile(DirectoryEntry* fileEntry, FILE* disk, uint8_t* outputBuffer)
-{
+bool readFile(DirectoryEntry* fileEntry, FILE* disk, uint8_t* outputBuffer) {
     bool ok = true; // Variável de controle
     uint16_t currentCluster = fileEntry->FirstClusterLow; // Cluster inicial do arquivo
 
@@ -162,10 +145,8 @@ bool readFile(DirectoryEntry* fileEntry, FILE* disk, uint8_t* outputBuffer)
     return ok;
 }
 
-
 // Função principal do programa
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     // Verifica se os argumentos foram passados corretamente
     if (argc < 3) {
         printf("Syntax: %s <disk image> <file name>, the strings have contain 11 characters and uppercase ./build/fat ./build/floppy.img \"TEST    TXT\"\n", argv[0]); // Exibe sintaxe
@@ -221,8 +202,7 @@ int main(int argc, char** argv)
     }
 
     // Exibe o conteúdo do arquivo
-    for (size_t i = 0; i < fileEntry->Size; i++)
-    {
+    for (size_t i = 0; i < fileEntry->Size; i++) {
         if (isprint(buffer[i])) // Se o byte é imprimível
             fputc(buffer[i], stdout); // Imprime o caractere
         else

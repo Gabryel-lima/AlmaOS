@@ -2,7 +2,7 @@
 ASM?=nasm
 ASMFLAGS?=-f bin
 CC16?=/usr/bin/watcom/binl/wcc
-CFLAGS16?=-4 -d3 -s -wx -ms -zl -zq -nt=STAGE2_CODE
+CFLAGS16?=-4 -d3 -s -wx -ms -zl -zq -za99 -nt=STAGE2_CODE
 LD16?=/usr/bin/watcom/binl/wlink
 
 SOURCES_C = $(wildcard *.c)

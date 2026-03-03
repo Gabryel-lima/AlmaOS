@@ -13,6 +13,12 @@
  */
 void putc(char c);
 /**
+ *  putc_utf8 - Processa um byte de uma sequência UTF-8 e imprime se o caractere estiver completo.
+ * 
+ *  @param c: O byte UTF-8.
+ */
+void putc_utf8(char c);
+/**
  *  puts - Imprime uma string terminada em nulo no console.
  *
  *  @param str: Um ponteiro para a string terminada em nulo a ser exibida.
@@ -30,6 +36,18 @@ void puts(const char* str);
  *  Ela exibe cada caractere da string no console usando a função putc, continuando até encontrar o terminador nulo da string.
  */
 void puts_f(const char far* str);
+/**
+ *  putwc - Imprime um caractere UTF-16 convertido para CP437.
+ * 
+ *  @param c: O caractere UTF-16.
+ */
+void putwc(uint16_t c);
+/**
+ *  putws - Imprime uma string UTF-16 terminada em nulo (convertida para CP437).
+ * 
+ *  @param str: Ponteiro para a string UTF-16.
+ */
+void putws(const uint16_t* str);
 /**
  *  printf - Imprime uma string formatada no console.
  *
