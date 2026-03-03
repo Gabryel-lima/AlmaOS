@@ -110,8 +110,8 @@ bool FAT_Initialize(DISK* disk) {
     }
 
     // abre o diretório raiz
-    uint32_t rootDirLba = g_Data->BS.BootSector.ReservedSectors + g_Data->BS.BootSector.SectorsPerFat * g_Data->BS.BootSector.FatCount;
-    uint32_t rootDirSize = sizeof(FAT_DirectoryEntry) * g_Data->BS.BootSector.DirEntryCount;
+    uint32_t rootDirLba = g_Data->BS.BootSector.ReservedSectors + g_Data->BS.BootSector.SectorsPerFat * g_Data->BS.BootSector.FatCount; // O diretório raiz começa após as áreas reservada e FAT
+    uint32_t rootDirSize = sizeof(FAT_DirectoryEntry) * g_Data->BS.BootSector.DirEntryCount; // O diretório raiz tem um tamanho fixo baseado no número de entradas
 
     g_Data->RootDirectory.Public.Handle = ROOT_DIRECTORY_HANDLE; // Handle especial para o diretório raiz
     g_Data->RootDirectory.Public.IsDirectory = true; // O diretório raiz é sempre um diretório
