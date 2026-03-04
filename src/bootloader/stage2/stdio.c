@@ -19,8 +19,8 @@ void putc(char c) {
     x86_Video_WriteCharTeletype(c, 0);
 }
 
-static uint32_t g_Utf32State = 0;
-static uint32_t g_Utf32Char = 0;
+static uint32_t g_Utf32State = 0; // Estado atual do decodificador UTF-8 (0 = esperando por um novo caractere, >0 = esperando por bytes de continuação)
+static uint32_t g_Utf32Char = 0; // Caractere UTF-32 em construção (armazenado enquanto bytes de continuação são processados)
 
 void putc_utf8(char c) {
     uint8_t b = (uint8_t)c;
