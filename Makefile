@@ -5,6 +5,9 @@ ASM=nasm
 SRC_DIR=src
 BUILD_DIR=build
 
+# Source directories for subprojects
+SRC_PROTECTED_DIR=$(SRC_DIR)/protected/src
+
 # Tools for 16-bit code (bootloader)
 CC16=/usr/bin/watcom/binl/wcc
 LD16=/usr/bin/watcom/binl/wlink
@@ -17,13 +20,14 @@ FAT_BIN := $(BUILD_DIR)/fat
 STAGE1_DIR=$(SRC_DIR)/bootloader/stage1
 STAGE2_DIR=$(SRC_DIR)/bootloader/stage2
 KERNEL_DIR=$(SRC_DIR)/kernel
+PROTECTED_DIR=protected/src
 
 # Arquivos de saída
 # Note que passamos o caminho absoluto para o sub-make para que ele saiba onde salvar
 ABS_BUILD_DIR=$(shell pwd)/$(BUILD_DIR)
 
 # Declare phony targets to avoid conflitos com arquivos de mesmo nome
-.PHONY: all bootloader kernel fat run debug clean help stage1 stage2
+.PHONY: all bootloader kernel protected-mode fat run debug clean help stage1 stage2
 
 #
 # Default target: build a floppy FAT12 image containing bootloader + kernel
@@ -47,12 +51,17 @@ stage2: $(BUILD_DIR)
 kernel: $(BUILD_DIR)
 	$(MAKE) -C $(KERNEL_DIR) BUILD_DIR=$(ABS_BUILD_DIR)
 
-# Compilação da imagem de floppy combinando tudo
-$(FLOPPY): stage1 stage2 kernel
+# Regra para compilar o código de protected mode no sub-diretório
+protected-mode: $(BUILD_DIR)
+	$(MAKE) -C $(PROTECTED_DIR) BUILD_DIR=$(ABS_BUILD_DIR)
+
+# Compilação da imagem de floppy combinando tudolear
+$(FLOPPY): stage1 stage2 kernel protected-mode
 	dd if=/dev/zero bs=512 count=2880 of=$@
 	mkfs.fat -F12 -n "ALMAOS" $@
 	mcopy -i $@ $(BUILD_DIR)/stage2.bin ::/stage2.bin
 	mcopy -i $@ $(BUILD_DIR)/kernel.bin ::/kernel.bin
+	mcopy -i $@ $(BUILD_DIR)/protected-mode.bin ::/protected-mode.bin
 	mcopy -i $@ "test.txt" ::/test.txt
 	dd if=$(BUILD_DIR)/stage1.bin conv=notrunc of=$@
 
@@ -68,7 +77,7 @@ $(FAT_BIN): $(FAT_SRC) | $(BUILD_DIR)
 
 # run in QEMU
 run: $(FLOPPY)
-	qemu-system-i386 -fda $<
+	qemu-system-i386 -drive file=$<,format=raw,if=floppy -boot a -serial stdio
 
 # run in Bochs
 debug: $(FLOPPY)
@@ -86,6 +95,7 @@ help:
 	@echo "Usage:"
 	@echo "  make          - build the floppy image"
 	@echo "  make kernel   - build the kernel binary"
+	@echo "  make protected-mode - build the protected mode binary"
 	@echo "  make bootloader - build the bootloader binary"
 	@echo "  make fat      - build the FAT utility"
 	@echo "  make run      - run the floppy image in QEMU"

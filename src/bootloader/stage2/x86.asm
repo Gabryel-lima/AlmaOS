@@ -3,6 +3,7 @@ bits 16         ; Continuamos em modo real de 16 bits
 section _TEXT class=CODE ; Seção de código para o bootloader, onde o código executável será colocado
 
 global __U4M
+global __U4D
 global _x86_Video_WriteCharTeletype
 global _x86_div64_32
 global _x86_Disk_Reset
