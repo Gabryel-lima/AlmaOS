@@ -2,6 +2,12 @@
 
 #include "stdint.h"
 
+/** @brief Declarações de funções utilitárias para o bootloader.
+ *  @file utility.h
+ *  @author Gabryel-lima
+ *  @date 2024-06
+ */
+
 /** Retorna o menor valor entre a e b.
  *
  *  @param a: O primeiro valor a ser comparado.

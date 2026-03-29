@@ -1,5 +1,11 @@
 #pragma once
 
+/** @brief Definições de tipos e macros comuns para o bootloader.
+ *  @file stddef.h
+ *  @author Gabryel-lima
+ *  @date 2024-06
+ */
+
 #ifndef NULL
     #ifdef __cplusplus
         #define NULL 0 /* Define NULL como 0 para C++ */

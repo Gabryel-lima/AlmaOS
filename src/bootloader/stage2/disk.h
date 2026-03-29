@@ -3,8 +3,14 @@
 #include "stdint.h"
 #include "stdbool.h"
 
+/** @brief Declarações de funções e estruturas para manipulação de discos.
+ * @file disk.h
+ * @author Gabryel-lima
+ * @date 2024-06
+ */
+
 /** Representa um disco */
-typedef struct {
+typedef struct DISK {
     uint8_t id; // Número do drive (0 para o primeiro disco, 1 para o segundo, etc.)
     uint16_t cylinders; // Número de cilindros do disco
     uint16_t sectors;   // Número de setores por trilha

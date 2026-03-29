@@ -3,10 +3,16 @@
 #include "stdint.h"
 #include "disk.h"
 
+/** @brief Declarações de funções e estruturas para manipulação da FAT.
+ * @file fat.h
+ * @author Gabryel-lima
+ * @date 2024-06
+ */
+
 #pragma pack(push, 1)
 
 /** Estrutura que representa o setor de boot da FAT */
-typedef struct {
+typedef struct FAT_DirectoryEntry {
     uint8_t Name[11];   // Nome do arquivo (8.3)
     uint8_t Attributes; // Atributos do arquivo
     uint8_t _Reserved; // Reservado
@@ -24,7 +30,7 @@ typedef struct {
 #pragma pack(pop)
 
 /** Estrutura que representa um arquivo ou diretório aberto */
-typedef struct {
+typedef struct FAT_File {
     int Handle;         // Handle do arquivo (índice na tabela de arquivos abertos, ou ROOT_DIRECTORY_HANDLE para o diretório raiz)
     bool IsDirectory;   // Indica se é um diretório
     uint32_t Position;  // Posição atual de leitura/escrita no arquivo

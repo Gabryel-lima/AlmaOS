@@ -1,6 +1,12 @@
 #ifndef _STDBOOL_H
 #define _STDBOOL_H
 
+/** @brief Definição do tipo booleano e valores para C99.
+ *  @file stdbool.h
+ *  @author Gabryel-lima
+ *  @date 2024-06
+ */
+
 #ifndef __cplusplus
 
 #define bool unsigned char  /* Define 'bool' as an unsigned char for C */

@@ -1,5 +1,11 @@
 #pragma once
 
+/** @brief Tipos de inteiros padrão para C99 e definições de ponteiros para o bootloader.
+ *  @file stdint.h
+ *  @author Gabryel-lima
+ *  @date 2024-06
+ */
+
 #ifdef __INTELLISENSE__
     #define far /**< Define 'far' como macro para ponteiros far no IntelliSense */
     #define _cdecl /**< Define '_cdecl' como macro para a convenção de chamada cdecl no IntelliSense */

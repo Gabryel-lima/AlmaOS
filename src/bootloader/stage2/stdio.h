@@ -3,6 +3,17 @@
 #include "stdbool.h"
 #include "stdint.h"
 
+/** @brief Funções de E/S padrão para o carregador de boot estágio 2.
+ *  @file stdio.h
+ *  @author Gabryel-lima
+ *  @date 2024-06
+ *
+ *  Este cabeçalho declara as funções básicas de E/S usadas no carregador de boot estágio 2.
+ *  Ele fornece uma interface simples para exibir caracteres e cadeias de caracteres no console.
+ *
+ *  Observação: Esta implementação é mínima e não inclui todas as funções padrão de E/S.
+ */
+
 /**
  *  stdio.h - Funções de E/S padrão para o carregador de boot estágio 2.
  *

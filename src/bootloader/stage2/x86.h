@@ -3,6 +3,12 @@
 #include "stdint.h"
 #include "stdbool.h"
 
+/** @brief Declarações de funções utilitárias para o bootloader.
+ *  @file x86.h
+ *  @author Gabryel-lima
+ *  @date 2024-06
+ */
+
 /** Divide um número de 64 bits por um número de 32 bits.
  *
  *  @param dividend: O dividendo de 64 bits.

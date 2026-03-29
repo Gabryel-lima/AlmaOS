@@ -2,6 +2,12 @@
 
 #include "stdint.h"
 
+/** @brief Declarações de funções para manipulação de memória.
+ *  @file memory.h
+ *  @author Gabryel-lima
+ *  @date 2024-06
+ */
+
 /** Função que copia uma quantidade especificada de bytes de uma área de memória para outra
  *  
  * @param dst: Um ponteiro para a área de destino onde os bytes serão copiados.

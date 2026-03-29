@@ -1,5 +1,11 @@
 #pragma once
 
+/** @brief Definições de endereços de memória para o bootloader.
+ *  @file memdefs.h
+ *  @author Gabryel-lima
+ *  @date 2024-06
+ */
+
 // 0x00000000 - 0x000003FF - interrupt vector table
 // 0x00000400 - 0x000004FF - BIOS data area
 

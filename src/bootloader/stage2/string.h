@@ -1,5 +1,11 @@
 #pragma once
 
+/** @brief Declarações de funções de manipulação de strings. 
+ * @file string.h
+ * @author Gabryel-lima
+ * @date 2024-06
+ */
+
 /** Declarações de funções de manipulação de strings. 
  * @param str: A string a ser processada.
  * @param chr: O caractere a ser encontrado na string.
