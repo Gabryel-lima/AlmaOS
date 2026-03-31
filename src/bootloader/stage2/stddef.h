@@ -3,7 +3,7 @@
 /** @brief Definições de tipos e macros comuns para o bootloader.
  *  @file stddef.h
  *  @author Gabryel-lima
- *  @date 2024-06
+ *  @date 2024-04-31
  */
 
 #ifndef NULL
@@ -16,3 +16,4 @@
 
 typedef unsigned int size_t; // Tipo para representar o tamanho de objetos em bytes
 typedef int ptrdiff_t; // Tipo para representar a diferença entre ponteiros
+typedef unsigned int uintptr_t; // Tipo para representar um ponteiro como um inteiro sem sinal

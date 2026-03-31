@@ -16,6 +16,10 @@ LD16=/usr/bin/watcom/binl/wlink
 FAT_SRC := tools/fat/fat.c
 FAT_BIN := $(BUILD_DIR)/fat
 
+# Test binary for generic types
+TEST_SRC := src/kernel/include/generic_test.c
+TEST_BIN := $(BUILD_DIR)/generic_test
+
 # Configurações do subprojeto
 STAGE1_DIR=$(SRC_DIR)/bootloader/stage1
 STAGE2_DIR=$(SRC_DIR)/bootloader/stage2
@@ -27,7 +31,7 @@ PROTECTED_DIR=protected/src
 ABS_BUILD_DIR=$(shell pwd)/$(BUILD_DIR)
 
 # Declare phony targets to avoid conflitos com arquivos de mesmo nome
-.PHONY: all bootloader kernel protected-mode fat run debug clean help stage1 stage2
+.PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2
 
 #
 # Default target: build a floppy FAT12 image containing bootloader + kernel
@@ -79,6 +83,14 @@ $(FAT_BIN): $(FAT_SRC) | $(BUILD_DIR)
 run: $(FLOPPY)
 	qemu-system-i386 -drive file=$<,format=raw,if=floppy -boot a -serial stdio
 
+# Compile and run a small unit test that validates the generic instantiations
+test-includes: $(BUILD_DIR) $(TEST_BIN)
+	@echo "Running generic_test..."
+	./$(TEST_BIN)
+
+$(TEST_BIN): $(TEST_SRC) | $(BUILD_DIR)
+	gcc -std=c11 -O2 -Wall $(TEST_SRC) -o $(TEST_BIN)
+
 # run in Bochs
 debug: $(FLOPPY)
 	bochs -f bochs_config
@@ -99,6 +111,7 @@ help:
 	@echo "  make bootloader - build the bootloader binary"
 	@echo "  make fat      - build the FAT utility"
 	@echo "  make run      - run the floppy image in QEMU"
+	@echo "  make test-includes - compile and run the generic test"
 	@echo "  make debug    - run the floppy image in Bochs"
 	@echo "  make clean    - clean the build directory"
 	@echo "  make help     - display this help message"

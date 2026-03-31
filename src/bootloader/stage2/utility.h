@@ -14,6 +14,15 @@
  *  @param b: O segundo valor a ser comparado.
  *  @return: O menor valor entre a e b.
  */
+/* Protege o protótipo caso um macro com o mesmo nome já exista
+ * (por exemplo, macros genéricos definidos em headers do kernel).
+ * Se `min` estiver definido como macro, desfazemos para que a
+ * declaração da função não seja expandida pelo pré-processador.
+ */
+#ifdef min
+#undef min
+#endif
+
 int min(int a, int b);
 /** Retorna o maior valor entre a e b.
  *
@@ -21,6 +30,11 @@ int min(int a, int b);
  *  @param b: O segundo valor a ser comparado.
  *  @return: O maior valor entre a e b.
  */
+/* Mesmo tratamento para `max`. */
+#ifdef max
+#undef max
+#endif
+
 int max(int a, int b);
 /** Alinha um número para o próximo múltiplo de alignTo.
  *
