@@ -70,6 +70,15 @@ FAT_File far* FAT_Open(DISK* disk, const char* path);
  *  @return: O número de bytes efetivamente lidos, ou 0 se ocorrer um erro.
  */
 uint32_t FAT_Read(DISK* disk, FAT_File far* file, uint32_t byteCount, void* dataOut);
+/** Lê dados de um arquivo aberto na FAT para um buffer far.
+ *
+ *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
+ *  @param file: Um ponteiro para a estrutura FAT_File representando o arquivo ou diretório aberto.
+ *  @param byteCount: O número de bytes a serem lidos.
+ *  @param dataOut: Um ponteiro far para o buffer onde os dados lidos serão armazenados.
+ *  @return: O número de bytes efetivamente lidos, ou 0 se ocorrer um erro.
+ */
+uint32_t FAT_ReadFar(DISK* disk, FAT_File far* file, uint32_t byteCount, void far* dataOut);
 /** Lê a próxima entrada de diretório de um diretório aberto na FAT.
  *
  *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.

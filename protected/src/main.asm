@@ -2,6 +2,7 @@ org 0x7C00
 bits 16
 
 entry:
+    cli
     ; configura pilha
     mov ax, 0
     mov ds, ax

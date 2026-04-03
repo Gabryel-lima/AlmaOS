@@ -5,6 +5,7 @@ section _TEXT class=CODE ; Seção de código para o bootloader, onde o código 
 global __U4M
 global __U4D
 global _x86_Video_WriteCharTeletype
+global _x86_FarJump
 global _x86_div64_32
 global _x86_Disk_Reset
 global _x86_Disk_Read
@@ -133,6 +134,19 @@ _x86_Video_WriteCharTeletype:
     mov sp, bp
     pop bp
     ret
+
+;
+; Salta para um endereco far e nao retorna.
+;
+_x86_FarJump:
+    push bp
+    mov bp, sp
+
+    cli
+
+    push word [bp + 4]
+    push word [bp + 6]
+    retf
 
 ;
 ; bool _cdecl x86_Disk_Reset(uint8_t drive);

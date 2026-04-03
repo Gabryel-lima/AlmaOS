@@ -192,13 +192,15 @@ uint32_t FAT_NextCluster(uint32_t currentCluster) {
         return val >> 4;
 }
 
-uint32_t FAT_Read(DISK* disk, FAT_File far* file, uint32_t byteCount, void* dataOut) {
+static uint32_t FAT_ReadImpl(DISK* disk, FAT_File far* file, uint32_t byteCount, void far* dataOut) {
     // obter dados do arquivo
     FAT_FileData far* fd = (file->Handle == ROOT_DIRECTORY_HANDLE) 
         ? &g_Data->RootDirectory 
         : &g_Data->OpenedFiles[file->Handle];
 
-    uint8_t* u8DataOut = (uint8_t*)dataOut;
+    uint8_t far* u8DataOut = (uint8_t far*)dataOut;
+    uint8_t far* u8Buffer = fd->Buffer;
+    uint32_t bytesRead = 0;
 
     // não ler além do fim do arquivo
     if (!fd->Public.IsDirectory) 
@@ -208,8 +210,9 @@ uint32_t FAT_Read(DISK* disk, FAT_File far* file, uint32_t byteCount, void* data
         uint32_t leftInBuffer = SECTOR_SIZE - (fd->Public.Position % SECTOR_SIZE);
         uint32_t take = min(byteCount, leftInBuffer);
 
-        memcpy(u8DataOut, fd->Buffer + fd->Public.Position % SECTOR_SIZE, take);
+        memcpy(u8DataOut, u8Buffer + fd->Public.Position % SECTOR_SIZE, (uint16_t)take);
         u8DataOut += take;
+        bytesRead += take;
         fd->Public.Position += take;
         byteCount -= take;
 
@@ -255,7 +258,15 @@ uint32_t FAT_Read(DISK* disk, FAT_File far* file, uint32_t byteCount, void* data
         }
     }
 
-    return u8DataOut - (uint8_t*)dataOut;
+    return bytesRead;
+}
+
+uint32_t FAT_Read(DISK* disk, FAT_File far* file, uint32_t byteCount, void* dataOut) {
+    return FAT_ReadImpl(disk, file, byteCount, (void far*)dataOut);
+}
+
+uint32_t FAT_ReadFar(DISK* disk, FAT_File far* file, uint32_t byteCount, void far* dataOut) {
+    return FAT_ReadImpl(disk, file, byteCount, dataOut);
 }
 
 bool FAT_ReadEntry(DISK* disk, FAT_File far* file, FAT_DirectoryEntry* dirEntry) {

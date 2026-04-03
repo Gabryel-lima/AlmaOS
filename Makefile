@@ -65,7 +65,7 @@ $(FLOPPY): stage1 stage2 kernel protected-mode
 	mkfs.fat -F12 -n "ALMAOS" $@
 	mcopy -i $@ $(BUILD_DIR)/stage2.bin ::/stage2.bin
 	mcopy -i $@ $(BUILD_DIR)/kernel.bin ::/kernel.bin
-	mcopy -i $@ $(BUILD_DIR)/protected-mode.bin ::/protected-mode.bin
+	mcopy -i $@ $(BUILD_DIR)/protected-mode.bin ::/protect.bin
 	mcopy -i $@ "test.txt" ::/test.txt
 	dd if=$(BUILD_DIR)/stage1.bin conv=notrunc of=$@
 

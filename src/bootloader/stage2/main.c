@@ -2,8 +2,11 @@
 #include "stdio.h"
 #include "disk.h"
 #include "fat.h"
+#include "x86.h"
 
 void far* g_data = (void far*)0x00500200;
+
+#define PROTECTED_MODE_LOAD_ADDR ((void far*)0x00007C00)
 
 void _cdecl cstart(uint16_t bootDrive) {
     DISK disk;
@@ -49,17 +52,42 @@ void _cdecl cstart(uint16_t bootDrive) {
     // read test.txt
     char buffer[100];
     uint32_t read;
+    uint8_t lastWasNewline = 1;
     fd = FAT_Open(&disk, "test.txt");
     while ((read = FAT_Read(&disk, fd, sizeof(buffer), buffer))) {
         for (uint32_t i = 0; i < read; i++) {
             if (buffer[i] == '\r')
                 continue;
-            if (buffer[i] == '\n')
+            if (buffer[i] == '\n') {
                 putc('\r');
+                lastWasNewline = 1;
+            } else {
+                lastWasNewline = 0;
+            }
             putc_utf8(buffer[i]);
         }
     }
+    if (!lastWasNewline) {
+        putc('\r');
+        putc('\n');
+    }
     FAT_Close(fd);
+
+    fd = FAT_Open(&disk, "protect.bin");
+    if (fd == 0) {
+        printf("Protected mode payload not found\r\n");
+        goto end;
+    }
+
+    if (FAT_ReadFar(&disk, fd, fd->Size, PROTECTED_MODE_LOAD_ADDR) != fd->Size) {
+        printf("Protected mode load error\r\n");
+        FAT_Close(fd);
+        goto end;
+    }
+
+    FAT_Close(fd);
+
+    x86_FarJump(0x0000, 0x7C00);
 
 end:
     for (;;);

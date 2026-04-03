@@ -26,6 +26,12 @@ void _cdecl x86_div64_32(uint64_t dividend,
  *  @param page: A página de vídeo onde o caractere será escrito.
  */
 void _cdecl x86_Video_WriteCharTeletype(char c, uint8_t page);
+/** Salta para um endereco far e nao retorna.
+ *
+ *  @param segment: O segmento de destino.
+ *  @param offset: O deslocamento de destino.
+ */
+void _cdecl x86_FarJump(uint16_t segment, uint16_t offset);
 /** Reseta um disco.
  *
  *  @param drive: O número do drive a ser resetado.
