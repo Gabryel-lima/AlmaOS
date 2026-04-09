@@ -22,23 +22,23 @@ void _cdecl cstart(uint16_t bootDrive) {
         goto end;
     }
 
-    // browse files in root
+    // lista alguns arquivos da raiz
     FAT_File far* fd = FAT_Open(&disk, "/");
     FAT_DirectoryEntry entry;
     int i = 0;
     while (FAT_ReadEntry(&disk, fd, &entry) && i++ < 5) {
-        // 1) end of directory
+        // 1) fim do diretório
         if (entry.Name[0] == 0x00) break;
-        // 2) deleted entry
+        // 2) entrada excluída
         if ((uint8_t)entry.Name[0] == 0xE5) continue;
-        // 3) LFN entry (attribute 0x0F)
+        // 3) entrada LFN (atributo 0x0F)
         if (entry.Attributes == FAT_ATTRIBUTE_LFN) continue;
-        // 4) volume label or other non-file entries
+        // 4) rótulo de volume ou outra entrada que não seja arquivo
         if (entry.Attributes & FAT_ATTRIBUTE_VOLUME_ID) continue;
-        // 5) only print first 5 entries to avoid flooding the output
+        // 5) limita a saída para não poluir o console
         if (i++ >= 5) break;
 
-        // safe to print SFN (11-byte 8.3). Replace non-printables with space.
+        // é seguro imprimir o SFN (8.3, 11 bytes). Substitui bytes não imprimíveis por espaço.
         printf("  ");
         for (int j = 0; j < 11; j++) {
             char ch = entry.Name[j];
@@ -49,7 +49,7 @@ void _cdecl cstart(uint16_t bootDrive) {
     }
     FAT_Close(fd);
 
-    // read test.txt
+    // lê test.txt
     char buffer[100];
     uint32_t read;
     uint8_t lastWasNewline = 1;

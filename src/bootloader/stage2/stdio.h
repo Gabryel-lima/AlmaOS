@@ -3,69 +3,52 @@
 #include "stdbool.h"
 #include "stdint.h"
 
-/** @brief Funções de E/S padrão para o carregador de boot estágio 2.
+/** @brief Funções de E/S padrão do estágio 2 do bootloader.
  *  @file stdio.h
  *  @author Gabryel-lima
  *  @date 2024-06
  *
- *  Este cabeçalho declara as funções básicas de E/S usadas no carregador de boot estágio 2.
- *  Ele fornece uma interface simples para exibir caracteres e cadeias de caracteres no console.
- *
- *  Observação: Esta implementação é mínima e não inclui todas as funções padrão de E/S.
+ *  Expõe saída de texto limitada para o console: caracteres ASCII, bytes UTF-8,
+ *  wide chars UTF-16 e uma printf parcial com suporte a strings normais e far.
  */
 
-/**
- *  stdio.h - Funções de E/S padrão para o carregador de boot estágio 2.
+/** Escreve um caractere na saída de vídeo.
  *
- *  Este cabeçalho declara as funções básicas de E/S usadas no carregador de boot estágio 2.
- *  Ele fornece uma interface simples para exibir caracteres e cadeias de caracteres no console.
- *
- *  Observação: Esta implementação é mínima e não inclui todas as funções padrão de E/S.
+ *  @param c: Caractere a ser exibido.
  */
 void putc(char c);
-/**
- *  putc_utf8 - Processa um byte de uma sequência UTF-8 e imprime se o caractere estiver completo.
- * 
- *  @param c: O byte UTF-8.
+/** Decodifica bytes UTF-8 incrementalmente e emite o caractere completo quando disponível.
+ *
+ *  @param c: Próximo byte da sequência UTF-8.
+ *  @note O decodificador mantém estado entre chamadas até completar a sequência.
  */
 void putc_utf8(char c);
-/**
- *  puts - Imprime uma string terminada em nulo no console.
+/** Escreve uma string terminada em NUL armazenada em memória próxima.
  *
- *  @param str: Um ponteiro para a string terminada em nulo a ser exibida.
- *
- *  Esta função exibe cada caractere da string no console usando a função putc.
- *  Ela continua até encontrar o terminador nulo da string.
+ *  @param str: String a ser exibida.
  */
 void puts(const char* str);
-/** 
- *  puts_f - Imprime uma string terminada em nulo localizada em memória far no console.
+/** Escreve uma string terminada em NUL armazenada em memória far.
  *
- *  @param str: Um ponteiro para a string terminada em nulo localizada em memória far a ser exibida.
- *
- *  Esta função é semelhante à puts, mas é usada para strings localizadas em memória far, que podem estar além do limite de 64KB.
- *  Ela exibe cada caractere da string no console usando a função putc, continuando até encontrar o terminador nulo da string.
+ *  @param str: String a ser exibida.
  */
 void puts_f(const char far* str);
-/**
- *  putwc - Imprime um caractere UTF-16 convertido para CP437.
- * 
- *  @param c: O caractere UTF-16.
+/** Escreve um caractere UTF-16 convertendo-o para CP437 quando necessário.
+ *
+ *  @param c: Caractere UTF-16 a ser exibido.
  */
 void putwc(uint16_t c);
-/**
- *  putws - Imprime uma string UTF-16 terminada em nulo (convertida para CP437).
- * 
- *  @param str: Ponteiro para a string UTF-16.
+/** Escreve uma string UTF-16 terminada em NUL convertida para CP437.
+ *
+ *  @param str: String UTF-16 a ser exibida.
  */
 void putws(const uint16_t* str);
-/**
- *  printf - Imprime uma string formatada no console.
+/** Imprime texto formatado com um subconjunto de printf.
  *
- *  @param fmt: A string de formato que especifica como os argumentos variáveis devem ser formatados e exibidos.
- *  @param ...: Os argumentos variáveis a serem formatados e exibidos de acordo com a string de formato.
- *
- *  Esta função processa a string de formato e os argumentos variáveis para exibir uma saída formatada no console.
- *  Ela suporta um subconjunto dos especificadores de formato padrão, como %d, %s, %x, etc.
+ *  @param fmt: String de formato.
+ *  @param ...: Argumentos variáveis compatíveis com o formato.
+ *  @note Suporta %c, %C, %s, %S, %d, %i, %u, %x, %X, %p, %o e %%.
+ *  @note Em %s, o modificador l ou ll seleciona leitura de string far.
+ *  @note Especificadores não suportados são ignorados.
  */
 void _cdecl printf(const char* fmt, ...);

@@ -3,15 +3,13 @@
 #include "x86.h"
 
 /**
- *  printf_number - Função auxiliar para formatar e imprimir números em printf.
+ *  Formata e imprime o próximo argumento numérico de printf.
  *
- *  @param argp: Um ponteiro para o próximo argumento variável a ser processado.
- *  @param length: O comprimento do argumento (curto, longo, etc.).
- *  @param sign: Indica se o número é com sinal ou sem sinal.
- *  @param radix: A base numérica para formatação (10 para decimal, 16 para hexadecimal, etc.).
- *
- *  Esta função extrai o número do argumento variável com base no comprimento e sinal, converte-o para uma string e a exibe no console.
- *  Ela retorna um ponteiro atualizado para o próximo argumento variável após processar o número.
+ *  @param argp: Ponteiro para o próximo argumento variável.
+ *  @param length: Modificador de comprimento já decodificado.
+ *  @param sign: Indica se o valor deve ser tratado como assinado.
+ *  @param radix: Base usada na conversão numérica.
+ *  @return: Ponteiro atualizado para o próximo argumento variável.
  */
 static int* printf_number(int* argp, int length, bool sign, int radix);
 

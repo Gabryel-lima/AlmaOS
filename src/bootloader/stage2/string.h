@@ -1,27 +1,30 @@
 #pragma once
 
-/** @brief Declarações de funções de manipulação de strings. 
- * @file string.h
- * @author Gabryel-lima
- * @date 2024-06
+/** @brief Funções básicas de manipulação de strings para o bootloader.
+ *  @file string.h
+ *  @author Gabryel-lima
+ *  @date 2024-06
+ *
+ *  Declarações das rotinas de string usadas pelo estágio 2.
  */
 
-/** Declarações de funções de manipulação de strings. 
- * @param str: A string a ser processada.
- * @param chr: O caractere a ser encontrado na string.
- * @return: Um ponteiro para a primeira ocorrência do caractere na string, ou NULL se o caractere não for encontrado.
+/** Procura a primeira ocorrência de chr em str.
+ *
+ *  @param str: String terminada em NUL onde a busca será feita.
+ *  @param chr: Caractere a ser procurado.
+ *  @return: Ponteiro para a primeira ocorrência de chr em str, ou NULL se str for NULL ou chr não for encontrado.
  */
 const char* strchr(const char* str, char chr);
-/** Copia a string src para dst, incluindo o caractere nulo de terminação.
- * @param dst: O buffer de destino onde a string será copiada. Deve ser grande o suficiente para conter a string src.
- * @param src: A string de origem a ser copiada.
- * @return: Um ponteiro para dst.
+/** Copia src para dst e garante terminação NUL.
+ *
+ *  @param dst: Buffer de destino; deve ter espaço suficiente para src.
+ *  @param src: String de origem.
+ *  @return: Ponteiro original de dst. Se dst for NULL, retorna NULL. Se src for NULL, grava string vazia.
  */
 char* strcpy(char* dst, const char* src);
-/** Copia até n caracteres da string src para dst. Se src for menor que n caracteres, dst será preenchido com caracteres nulos até atingir n caracteres.
- * @param dst: O buffer de destino onde a string será copiada. Deve ser grande o suficiente para conter n caracteres.
- * @param src: A string de origem a ser copiada.
- * @param n: O número máximo de caracteres a serem copiados de src para dst.
- * @return: Um ponteiro para dst.
+/** Mede o comprimento de uma string terminada em NUL.
+ *
+ *  @param str: String a ser medida. Deve apontar para uma sequência terminada em NUL.
+ *  @return: Número de caracteres antes do primeiro caractere nulo.
  */
 unsigned strlen(const char* str);

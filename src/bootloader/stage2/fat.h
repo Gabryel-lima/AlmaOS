@@ -11,7 +11,7 @@
 
 #pragma pack(push, 1)
 
-/** Estrutura que representa o setor de boot da FAT */
+/** Estrutura que representa uma entrada de diretório da FAT. */
 typedef struct FAT_DirectoryEntry {
     uint8_t Name[11];   // Nome do arquivo (8.3)
     uint8_t Attributes; // Atributos do arquivo
@@ -29,15 +29,19 @@ typedef struct FAT_DirectoryEntry {
 
 #pragma pack(pop)
 
-/** Estrutura que representa um arquivo ou diretório aberto */
+/** Estado de um arquivo ou diretório aberto.
+ *
+ *  O campo Handle aponta para a tabela interna de arquivos abertos; a raiz
+ *  usa ROOT_DIRECTORY_HANDLE.
+ */
 typedef struct FAT_File {
-    int Handle;         // Handle do arquivo (índice na tabela de arquivos abertos, ou ROOT_DIRECTORY_HANDLE para o diretório raiz)
-    bool IsDirectory;   // Indica se é um diretório
-    uint32_t Position;  // Posição atual de leitura/escrita no arquivo
+    int Handle;         // Índice interno do arquivo aberto, ou ROOT_DIRECTORY_HANDLE para a raiz
+    bool IsDirectory;   // true para diretórios, false para arquivos
+    uint32_t Position;  // Posição atual de leitura em bytes
     uint32_t Size;      // Tamanho do arquivo em bytes
 } FAT_File;
 
-/** Estrutura que representa os dados da FAT */
+/** Máscaras de atributos usadas por entradas de diretório FAT. */
 enum FAT_Attributes {
     FAT_ATTRIBUTE_READ_ONLY = 0x01,     // Atributo de somente leitura
     FAT_ATTRIBUTE_HIDDEN = 0x02,        // Atributo de arquivo oculto
@@ -45,7 +49,7 @@ enum FAT_Attributes {
     FAT_ATTRIBUTE_VOLUME_ID = 0x08,     // Atributo de rótulo de volume
     FAT_ATTRIBUTE_DIRECTORY = 0x10,     // Atributo de diretório
     FAT_ATTRIBUTE_ARCHIVE = 0x20,       // Atributo de arquivo de arquivamento
-    FAT_ATTRIBUTE_LFN = FAT_ATTRIBUTE_READ_ONLY | FAT_ATTRIBUTE_HIDDEN | FAT_ATTRIBUTE_SYSTEM | FAT_ATTRIBUTE_VOLUME_ID // Atributo de entrada de nome longo (LFN)
+    FAT_ATTRIBUTE_LFN = FAT_ATTRIBUTE_READ_ONLY | FAT_ATTRIBUTE_HIDDEN | FAT_ATTRIBUTE_SYSTEM | FAT_ATTRIBUTE_VOLUME_ID // Combinação usada por entradas de nome longo (LFN)
 };
 
 /** Inicializa a FAT lendo o setor de boot, a tabela FAT e o diretório raiz.
