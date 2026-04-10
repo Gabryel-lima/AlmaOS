@@ -11,7 +11,7 @@
 
 /** Representa um disco */
 typedef struct DISK {
-    uint8_t id; // Número do drive (0 para o primeiro disco, 1 para o segundo, etc.)
+    uint8_t id; // Número do drive BIOS (ex.: 0x00 para floppy, 0x80 para HD)
     uint16_t cylinders; // Número de cilindros do disco
     uint16_t sectors;   // Número de setores por trilha
     uint16_t heads;     // Número de cabeças do disco
@@ -20,7 +20,7 @@ typedef struct DISK {
 /** Inicializa um disco lendo seus parâmetros (cilindros, setores, cabeças) usando a BIOS.
  *
  *  @param disk: Um ponteiro para a estrutura DISK a ser inicializada.
- *  @param driveNumber: O número do drive a ser inicializado (0 para o primeiro disco, 1 para o segundo, etc.).
+ *  @param driveNumber: O número do drive BIOS a ser inicializado (ex.: 0x00 para floppy, 0x80 para HD).
  *  @return: true se a inicialização for bem-sucedida, false caso contrário.
  */
 bool DISK_Initialize(DISK* disk, uint8_t driveNumber);

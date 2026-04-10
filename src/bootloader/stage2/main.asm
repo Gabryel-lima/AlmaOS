@@ -6,11 +6,11 @@ extern _cstart
 global entry
 
 entry:
-    ; Configura o segmento de pilha e o ponteiro de base para o modo protegido
+    ; Configura uma stack fixa reservada para o stage2 e o kernel inicial
     cli
-    mov ax, ds
+    mov ax, 0x7400
     mov ss, ax
-    mov sp, 0
+    mov sp, 0x4000
     mov bp, sp
     sti
 

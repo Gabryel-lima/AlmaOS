@@ -41,7 +41,7 @@ bool _cdecl x86_Disk_Reset(uint8_t drive);
 
 /** Lê setores de um disco.
  *
- *  @param drive: O número do drive.
+ *  @param drive: O número do drive BIOS (ex.: 0x00 para floppy, 0x80 para HD).
  *  @param cylinder: O cilindro a ser lido.
  *  @param sector: O setor a ser lido.
  *  @param head: A cabeça a ser lida.
@@ -58,7 +58,7 @@ bool _cdecl x86_Disk_Read(uint8_t drive,
 
 /** Obtém os parâmetros de um drive.
  *
- *  @param drive: O número do drive.
+ *  @param drive: O número do drive BIOS (ex.: 0x00 para floppy, 0x80 para HD).
  *  @param driveTypeOut: Um ponteiro para armazenar o tipo do drive.
  *  @param cylindersOut: Um ponteiro para armazenar o número de cilindros.
  *  @param sectorsOut: Um ponteiro para armazenar o número de setores por trilha.
@@ -70,3 +70,14 @@ bool _cdecl x86_Disk_GetDriveParams(uint8_t drive,
                                     uint16_t* cylindersOut,
                                     uint16_t* sectorsOut,
                                     uint16_t* headsOut);
+
+/** Obtém o mapa de memória E820 disponível na BIOS.
+ *
+ *  @param entriesOut: Buffer far onde as entradas E820 serão gravadas.
+ *  @param entryCapacity: Número máximo de entradas no buffer.
+ *  @param entryCountOut: Ponteiro para receber a quantidade efetiva de entradas.
+ *  @return: true se o mapa foi coletado com sucesso, false caso contrário.
+ */
+bool _cdecl x86_Memory_GetMap(void far* entriesOut,
+                              uint16_t entryCapacity,
+                              uint16_t* entryCountOut);

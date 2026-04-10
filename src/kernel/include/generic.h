@@ -54,7 +54,7 @@
    @param T: O tipo para o qual a função genérica será instanciada. 
    @return: A função genérica instanciada para o tipo T. */
 #define DEFINE_SWAP(T)                           \
-    static inline void swap_##T(T* a, T* b) {   \
+    static inline void swap_##T(T* a, T* b) {    \
         T tmp = *a;                              \
         *a    = *b;                              \
         *b    = tmp;                             \
@@ -68,28 +68,28 @@
 #define DEFINE_ARRAY_FILL(T)                                \
     static inline void array_fill_##T(T* arr,               \
                                       usize n, T val) {     \
-        for (usize i = 0; i < n; i++) arr[i] = val;        \
+        for (usize i = 0; i < n; i++) arr[i] = val;         \
     }
 
 /** Implementação explícita do _Generic para cada tipo listado em KERNEL_TYPES. 
    @param T: O tipo para o qual a função genérica será instanciada. 
    @return: A função genérica instanciada para o tipo T. */
-#define DEFINE_ARRAY_SUM(T)                                  \
+#define DEFINE_ARRAY_SUM(T)                                 \
     static inline T array_sum_##T(const T* arr, usize n) {  \
-        T acc = 0;                                           \
+        T acc = 0;                                          \
         for (usize i = 0; i < n; i++) acc += arr[i];        \
-        return acc;                                          \
+        return acc;                                         \
     }
 
 /** Implementação explícita do _Generic para cada tipo listado em KERNEL_TYPES. 
    @param T: O tipo para o qual a função genérica será instanciada. 
    @return: A função genérica instanciada para o tipo T. */
-#define DEFINE_ARRAY_FIND(T)                                      \
-    static inline isize array_find_##T(const T* arr,              \
-                                       usize n, T val) {          \
-        for (usize i = 0; i < n; i++)                             \
-            if (arr[i] == val) return (isize)i;                   \
-        return -1;                                                 \
+#define DEFINE_ARRAY_FIND(T)                                \
+    static inline isize array_find_##T(const T* arr,        \
+                                       usize n, T val) {    \
+        for (usize i = 0; i < n; i++)                       \
+            if (arr[i] == val) return (isize)i;             \
+        return -1;                                          \
     }
 
 /* ── Atalhos de chamada ──────────────────────────────── */

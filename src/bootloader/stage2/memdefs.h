@@ -9,12 +9,43 @@
 // 0x00000000 - 0x000003FF - interrupt vector table
 // 0x00000400 - 0x000004FF - BIOS data area
 
-#define MEMORY_MIN          0x00000500  // 0x00000500 - 0x00080000 - free
-#define MEMORY_MAX          0x00080000  // 0x00000500 - 0x00080000 - free
+#define MEMORY_MIN          0x00000500  // 0x00000500 - início da memória convencional utilizável
+#define MEMORY_MAX          0x000A0000  // 0x00000500 - 0x0009FFFF - limite da memória convencional
 
 // 0x00000500 - 0x00010500 - FAT driver
 #define MEMORY_FAT_ADDR     ((void far*)0x00500000) // 0x00000500 - 0x00010500 - FAT driver
 #define MEMORY_FAT_SIZE     0x00010000 // 0x00000500 - 0x00010500 - FAT driver
+
+// 0x00012000 - 0x00020000 - kernel payload carregado pelo stage2
+#define MEMORY_KERNEL_ADDR      ((void far*)0x12000000)
+#define MEMORY_KERNEL_SEGMENT   0x1200
+#define MEMORY_KERNEL_OFFSET    0x0000
+
+// 0x00060000 - 0x00060FFF - boot info fixo passado ao kernel
+#define MEMORY_BOOT_INFO_ADDR   ((void far*)0x60000000)
+#define MEMORY_BOOT_INFO_SIZE   0x00001000
+
+// 0x00061000 - 0x00061FFF - buffer do mapa de memória E820
+#define MEMORY_E820_MAP_ADDR        ((void far*)0x61000000)
+#define MEMORY_E820_MAP_CAPACITY    32
+
+// 0x00062000 - 0x00063FFF - buffer de I/O genérico do sistema
+#define MEMORY_IO_BUFFER_ADDR   ((void far*)0x62000000)
+#define MEMORY_IO_BUFFER_SIZE   0x00002000
+
+// 0x00074000 - 0x00077FFF - stack do stage2 e da fase inicial do kernel
+#define MEMORY_STAGE2_STACK_SEGMENT 0x7400
+#define MEMORY_STAGE2_STACK_TOP     0x4000
+#define MEMORY_STAGE2_STACK_SIZE    0x00004000
+
+// 0x00078000 - 0x00097FFF - heap simples do kernel, validado pelo mapa de memória
+#define MEMORY_KERNEL_HEAP_ADDR   ((void far*)0x78000000)
+#define MEMORY_KERNEL_HEAP_SIZE   0x00020000
+#define MEMORY_HEAP_MIN_PHYSICAL  0x00078000
+
+// 0x000A0000 - 0x000BFFFF - framebuffer/VGA reservado para backend gráfico futuro
+#define MEMORY_FRAMEBUFFER_ADDR   ((void far*)0xA0000000)
+#define MEMORY_FRAMEBUFFER_SIZE   0x00020000
 
 // 0x00020000 - 0x00030000 - stage2
 

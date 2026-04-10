@@ -2,93 +2,74 @@
 #include "stdio.h"
 #include "disk.h"
 #include "fat.h"
+#include "memory.h"
+#include "memdefs.h"
 #include "x86.h"
 
-void far* g_data = (void far*)0x00500200;
+#define BOOT_KERNEL_PATH "/kernel.bin"
 
-#define PROTECTED_MODE_LOAD_ADDR ((void far*)0x00007C00)
+static void boot_fail(const char* message) {
+    printf("%s\r\n", message);
+    for (;;)
+        ;
+}
 
 void _cdecl cstart(uint16_t bootDrive) {
     DISK disk;
-    if (!DISK_Initialize(&disk, bootDrive)) {
-        printf("Disk init error\r\n");
-        goto end;
+    FAT_File far* kernel;
+    MEMORY_Map memoryMap;
+    MEMORY_Allocator kernelAllocator;
+    MEMORY_BootInfo far* bootInfo = (MEMORY_BootInfo far*)MEMORY_BOOT_INFO_ADDR;
+    MEMORY_E820Entry far* memoryEntries = (MEMORY_E820Entry far*)MEMORY_E820_MAP_ADDR;
+
+    if (!DISK_Initialize(&disk, bootDrive))
+        boot_fail("Disk init error");
+
+    if (!FAT_Initialize(&disk))
+        boot_fail("FAT init error");
+
+    MEMORY_Map_Init(&memoryMap, memoryEntries, MEMORY_E820_MAP_CAPACITY);
+    if (!MEMORY_Map_Collect(&memoryMap))
+        boot_fail("Memory map error");
+
+    if (!MEMORY_Allocator_InitFromMap(&kernelAllocator,
+                                      &memoryMap,
+                                      MEMORY_HEAP_MIN_PHYSICAL,
+                                      MEMORY_KERNEL_HEAP_SIZE))
+        boot_fail("Kernel heap error");
+
+    MEMORY_BootInfo_Init(bootInfo,
+                         bootDrive,
+                         MEMORY_VIDEO_MODE_TEXT,
+                         &memoryMap,
+                         &kernelAllocator,
+                         (void far*)MEMORY_IO_BUFFER_ADDR,
+                         MEMORY_IO_BUFFER_SIZE,
+                         0,
+                         0,
+                         0,
+                         0,
+                         0,
+                         0);
+
+    printf("Memory map: %u entries, heap=%lx size=%lu\r\n",
+           memoryMap.EntryCount,
+           kernelAllocator.BasePhysical,
+           kernelAllocator.Capacity);
+
+    kernel = FAT_Open(&disk, BOOT_KERNEL_PATH);
+    if (kernel == 0)
+        boot_fail("kernel.bin not found");
+
+    if (FAT_ReadFar(&disk, kernel, kernel->Size, MEMORY_KERNEL_ADDR) != kernel->Size) {
+        FAT_Close(kernel);
+        boot_fail("Kernel load error");
     }
 
-    DISK_ReadSectors(&disk, 19, 1, g_data);
+    FAT_Close(kernel);
 
-    if (!FAT_Initialize(&disk)) {
-        printf("FAT init error\r\n");
-        goto end;
-    }
+    x86_FarJump(MEMORY_KERNEL_SEGMENT, MEMORY_KERNEL_OFFSET);
 
-    // lista alguns arquivos da raiz
-    FAT_File far* fd = FAT_Open(&disk, "/");
-    FAT_DirectoryEntry entry;
-    int i = 0;
-    while (FAT_ReadEntry(&disk, fd, &entry) && i++ < 5) {
-        // 1) fim do diretório
-        if (entry.Name[0] == 0x00) break;
-        // 2) entrada excluída
-        if ((uint8_t)entry.Name[0] == 0xE5) continue;
-        // 3) entrada LFN (atributo 0x0F)
-        if (entry.Attributes == FAT_ATTRIBUTE_LFN) continue;
-        // 4) rótulo de volume ou outra entrada que não seja arquivo
-        if (entry.Attributes & FAT_ATTRIBUTE_VOLUME_ID) continue;
-        // 5) limita a saída para não poluir o console
-        if (i++ >= 5) break;
-
-        // é seguro imprimir o SFN (8.3, 11 bytes). Substitui bytes não imprimíveis por espaço.
-        printf("  ");
-        for (int j = 0; j < 11; j++) {
-            char ch = entry.Name[j];
-            if ((unsigned char)ch < 32) ch = ' ';
-            putc(ch);
-        }
-        printf("\r\n");
-    }
-    FAT_Close(fd);
-
-    // lê test.txt
-    char buffer[100];
-    uint32_t read;
-    uint8_t lastWasNewline = 1;
-    fd = FAT_Open(&disk, "test.txt");
-    while ((read = FAT_Read(&disk, fd, sizeof(buffer), buffer))) {
-        for (uint32_t i = 0; i < read; i++) {
-            if (buffer[i] == '\r')
-                continue;
-            if (buffer[i] == '\n') {
-                putc('\r');
-                lastWasNewline = 1;
-            } else {
-                lastWasNewline = 0;
-            }
-            putc_utf8(buffer[i]);
-        }
-    }
-    if (!lastWasNewline) {
-        putc('\r');
-        putc('\n');
-    }
-    FAT_Close(fd);
-
-    fd = FAT_Open(&disk, "protect.bin");
-    if (fd == 0) {
-        printf("Protected mode payload not found\r\n");
-        goto end;
-    }
-
-    if (FAT_ReadFar(&disk, fd, fd->Size, PROTECTED_MODE_LOAD_ADDR) != fd->Size) {
-        printf("Protected mode load error\r\n");
-        FAT_Close(fd);
-        goto end;
-    }
-
-    FAT_Close(fd);
-
-    x86_FarJump(0x0000, 0x7C00);
-
-end:
-    for (;;);
+    for (;;)
+        ;
 }

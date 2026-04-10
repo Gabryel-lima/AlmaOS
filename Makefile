@@ -34,7 +34,7 @@ ABS_BUILD_DIR=$(shell pwd)/$(BUILD_DIR)
 .PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2
 
 #
-# Default target: build a floppy FAT12 image containing bootloader + kernel
+# Default target: build a floppy FAT12 image containing bootloader + kernel payload
 #
 FLOPPY := $(BUILD_DIR)/floppy.img
 all: $(FLOPPY) fat
@@ -60,12 +60,11 @@ protected-mode: $(BUILD_DIR)
 	$(MAKE) -C $(PROTECTED_DIR) BUILD_DIR=$(ABS_BUILD_DIR)
 
 # Compilação da imagem de floppy combinando tudolear
-$(FLOPPY): stage1 stage2 kernel protected-mode
+$(FLOPPY): stage1 stage2 kernel
 	dd if=/dev/zero bs=512 count=2880 of=$@
 	mkfs.fat -F12 -n "ALMAOS" $@
 	mcopy -i $@ $(BUILD_DIR)/stage2.bin ::/stage2.bin
 	mcopy -i $@ $(BUILD_DIR)/kernel.bin ::/kernel.bin
-	mcopy -i $@ $(BUILD_DIR)/protected-mode.bin ::/protect.bin
 	mcopy -i $@ "test.txt" ::/test.txt
 	dd if=$(BUILD_DIR)/stage1.bin conv=notrunc of=$@
 

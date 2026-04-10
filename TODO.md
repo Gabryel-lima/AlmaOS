@@ -5,24 +5,24 @@ O foco e manter o boot, o kernel e a futura camada grafica com contratos claros.
 
 ## Estado atual
 
-- O stage2 ainda esta no caminho de carregamento de arquivos e testes de FAT em [src/bootloader/stage2/main.c](src/bootloader/stage2/main.c).
+- O stage2 agora cobre carregamento de arquivos, testes de FAT e coleta do mapa de memoria em [src/bootloader/stage2/main.c](src/bootloader/stage2/main.c).
 - O fluxo de modo protegido/demo esta em [protected/src/main.asm](protected/src/main.asm).
 - O kernel basico de teste esta em [src/kernel/main.asm](src/kernel/main.asm).
 
 ## 1. Base do sistema
 
-- [ ] Fechar o contrato do boot: stage1 -> stage2 -> payload principal.
-- [ ] Definir qual binario e o caminho oficial do sistema: `kernel.bin`, `protect.bin` ou um unico payload consolidado.
-- [ ] Padronizar os argumentos de boot: drive, mapa de memoria, modo de video e ponteiros far.
-- [ ] Criar tratamento unico de erro para boot, disco, FAT e carregamento.
-- [ ] Separar claramente o que e demo do que e runtime real.
+- [x] Fechar o contrato do boot: stage1 -> stage2 -> payload principal.
+- [x] Definir qual binario e o caminho oficial do sistema: `kernel.bin`, `protect.bin` ou um unico payload consolidado.
+- [x] Padronizar os argumentos de boot: drive, mapa de memoria, modo de video e ponteiros far.
+- [x] Criar tratamento unico de erro para boot, disco, FAT e carregamento.
+- [x] Separar claramente o que e demo do que e runtime real.
 
 ## 2. Memoria
 
-- [ ] Ler e guardar o mapa de memoria da maquina ou do emulador.
-- [ ] Criar um alocador simples para o kernel.
-- [ ] Reservar regioes fixas para stack, heap, buffers de I/O e framebuffer.
-- [ ] Definir contratos de near/far e evitar overflow de 64 KB onde isso for uma limitacao real.
+- [x] Ler e guardar o mapa de memoria da maquina ou do emulador.
+- [x] Criar um alocador simples para o kernel.
+- [x] Reservar regioes fixas para stack, heap, buffers de I/O e framebuffer.
+- [x] Definir contratos de near/far e evitar overflow de 64 KB onde isso for uma limitacao real.
 
 ## 3. Entrada, tempo e depuracao
 

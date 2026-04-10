@@ -42,6 +42,19 @@ make
 ```
 
 Isso criará o diretório `build/` contendo o arquivo `floppy.img`.
+A imagem padrão carrega `stage1.bin`, `stage2.bin` e `kernel.bin`; o alvo `protected-mode` continua disponível como demo separada.
+
+### Build com CMake
+
+Se preferir usar CMake como entrada principal sem abandonar o Makefile, configure um diretório separado:
+
+```bash
+cmake -S . -B build-cmake
+cmake --build build-cmake
+ctest --test-dir build-cmake --output-on-failure
+```
+
+O projeto CMake apenas orquestra os alvos existentes do Makefile, então os dois fluxos permanecem equivalentes.
 
 ## ⚙️ Configuração do VS Code (IntelliSense)
 

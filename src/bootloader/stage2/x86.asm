@@ -10,6 +10,7 @@ global _x86_div64_32
 global _x86_Disk_Reset
 global _x86_Disk_Read
 global _x86_Disk_GetDriveParams
+global _x86_Memory_GetMap
 
 ;
 ; U4M
@@ -303,6 +304,76 @@ _x86_Disk_GetDriveParams:
     pop es
 
     ; restaurar frame antigo
+    mov sp, bp
+    pop bp
+    ret
+
+;
+; bool _cdecl x86_Memory_GetMap(void far* entriesOut,
+;                               uint16_t entryCapacity,
+;                               uint16_t* entryCountOut);
+; Coleta o mapa E820 disponível na BIOS.
+; Parâmetros:
+;   - entriesOut: Buffer far onde as entradas E820 serão gravadas.
+;   - entryCapacity: Número máximo de entradas no buffer.
+;   - entryCountOut: Ponteiro para a quantidade efetiva de entradas.
+; Retorno:
+;   - AX: 1 em caso de sucesso, 0 em caso de erro.
+;
+_x86_Memory_GetMap:
+    push bp
+    mov bp, sp
+    sub sp, 4
+
+    push ebx
+    push si
+    push di
+    push es
+
+    mov di, [bp + 4]        ; buffer far: offset
+    mov es, [bp + 6]        ; buffer far: segmento
+    mov ax, [bp + 8]        ; capacidade do buffer
+    mov [bp - 2], ax
+    mov word [bp - 4], 0    ; contador de entradas
+    mov si, [bp + 10]       ; ponteiro near para o contador de saída
+    mov word [si], 0
+
+    xor ebx, ebx            ; token de continuação da E820
+
+.loop:
+    mov ax, [bp - 4]
+    cmp ax, [bp - 2]
+    jae .fail
+
+    mov eax, 0xE820
+    mov edx, 0x534D4150     ; 'SMAP'
+    mov ecx, 24
+    int 0x15
+    jc .fail
+
+    cmp eax, 0x534D4150
+    jne .fail
+
+    add di, 24
+    inc word [bp - 4]
+    test ebx, ebx
+    jnz .loop
+
+.success:
+    mov ax, [bp - 4]
+    mov si, [bp + 10]
+    mov [si], ax
+    mov ax, 1
+    jmp .done
+
+.fail:
+    xor ax, ax
+
+.done:
+    pop es
+    pop di
+    pop si
+    pop ebx
     mov sp, bp
     pop bp
     ret
