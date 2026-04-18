@@ -3,7 +3,7 @@
 
 /** @brief Operações genéricas para tipos primitivos. 
  *  @author Gabriel-lima 
- *  @date 2024-04-30
+ *  @date 2026-04-30
  */
 
 /** @file generic.h

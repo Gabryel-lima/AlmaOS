@@ -3,7 +3,7 @@
 /** @brief Definições de tipos e macros comuns para o bootloader.
  *  @file stddef.h
  *  @author Gabryel-lima
- *  @date 2024-04-31
+ *  @date 2026-04-31
  */
 
 #ifndef NULL

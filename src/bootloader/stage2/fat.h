@@ -1,13 +1,13 @@
 #pragma once
 
+/** @brief Declarações de funções e estruturas para manipulação da FAT.
+ *  @file fat.h
+ *  @author Gabryel-lima
+ *  @date 2026-03
+*/
+
 #include "stdint.h"
 #include "disk.h"
-
-/** @brief Declarações de funções e estruturas para manipulação da FAT.
- * @file fat.h
- * @author Gabryel-lima
- * @date 2024-06
- */
 
 #pragma pack(push, 1)
 
@@ -30,9 +30,12 @@ typedef struct FAT_DirectoryEntry {
 #pragma pack(pop)
 
 /** Estado de um arquivo ou diretório aberto.
- *
  *  O campo Handle aponta para a tabela interna de arquivos abertos; a raiz
  *  usa ROOT_DIRECTORY_HANDLE.
+ *  @param Handle: Índice interno do arquivo aberto, ou ROOT_DIRECTORY_HANDLE para a raiz
+ *  @param IsDirectory: true para diretórios, false para arquivos
+ *  @param Position: Posição atual de leitura em bytes
+ *  @param Size: Tamanho do arquivo em bytes
  */
 typedef struct FAT_File {
     int Handle;         // Índice interno do arquivo aberto, ou ROOT_DIRECTORY_HANDLE para a raiz
@@ -41,7 +44,15 @@ typedef struct FAT_File {
     uint32_t Size;      // Tamanho do arquivo em bytes
 } FAT_File;
 
-/** Máscaras de atributos usadas por entradas de diretório FAT. */
+/** Máscaras de atributos usadas por entradas de diretório FAT. 
+ *  @param FAT_ATTRIBUTE_READ_ONLY: Atributo de somente leitura
+ *  @param FAT_ATTRIBUTE_HIDDEN: Atributo de arquivo oculto
+ *  @param FAT_ATTRIBUTE_SYSTEM: Atributo de arquivo de sistema
+ *  @param FAT_ATTRIBUTE_VOLUME_ID: Atributo de rótulo de volume
+ *  @param FAT_ATTRIBUTE_DIRECTORY: Atributo de diretório
+ *  @param FAT_ATTRIBUTE_ARCHIVE: Atributo de arquivo de arquivamento
+ *  @param FAT_ATTRIBUTE_LFN: Combinação usada por entradas de nome longo (LFN)
+*/
 enum FAT_Attributes {
     FAT_ATTRIBUTE_READ_ONLY = 0x01,     // Atributo de somente leitura
     FAT_ATTRIBUTE_HIDDEN = 0x02,        // Atributo de arquivo oculto
@@ -53,20 +64,19 @@ enum FAT_Attributes {
 };
 
 /** Inicializa a FAT lendo o setor de boot, a tabela FAT e o diretório raiz.
- *
  *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
  *  @return: true se a inicialização for bem-sucedida, false caso contrário.
  */
 bool FAT_Initialize(DISK* disk);
+
 /** Abre um arquivo ou diretório na FAT a partir de seu caminho.
- *
  *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
  *  @param path: O caminho do arquivo ou diretório a ser aberto, usando '/' como separador. Exemplo: "/DIR1/FILE.TXT".
  *  @return: Um ponteiro para a estrutura FAT_File representando o arquivo ou diretório aberto, ou NULL se não for encontrado ou ocorrer um erro.
  */
 FAT_File far* FAT_Open(DISK* disk, const char* path);
+
 /** Lê dados de um arquivo ou diretório aberto na FAT.
- *
  *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
  *  @param file: Um ponteiro para a estrutura FAT_File representando o arquivo ou diretório aberto.
  *  @param byteCount: O número de bytes a serem lidos.
@@ -74,8 +84,8 @@ FAT_File far* FAT_Open(DISK* disk, const char* path);
  *  @return: O número de bytes efetivamente lidos, ou 0 se ocorrer um erro.
  */
 uint32_t FAT_Read(DISK* disk, FAT_File far* file, uint32_t byteCount, void* dataOut);
+
 /** Lê dados de um arquivo aberto na FAT para um buffer far.
- *
  *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
  *  @param file: Um ponteiro para a estrutura FAT_File representando o arquivo ou diretório aberto.
  *  @param byteCount: O número de bytes a serem lidos.
@@ -83,16 +93,16 @@ uint32_t FAT_Read(DISK* disk, FAT_File far* file, uint32_t byteCount, void* data
  *  @return: O número de bytes efetivamente lidos, ou 0 se ocorrer um erro.
  */
 uint32_t FAT_ReadFar(DISK* disk, FAT_File far* file, uint32_t byteCount, void far* dataOut);
+
 /** Lê a próxima entrada de diretório de um diretório aberto na FAT.
- *
  *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
  *  @param file: Um ponteiro para a estrutura FAT_File representando o diretório aberto.
  *  @param dirEntry: Um ponteiro para a estrutura FAT_DirectoryEntry onde a entrada lida será armazenada.
  *  @return: true se uma entrada foi lida com sucesso, false se não houver mais entradas ou ocorrer um erro.
  */
 bool FAT_ReadEntry(DISK* disk, FAT_File far* file, FAT_DirectoryEntry* dirEntry);
+
 /** Fecha um arquivo ou diretório aberto na FAT, liberando quaisquer recursos associados.
- *
  *  @param file: Um ponteiro para a estrutura FAT_File representando o arquivo ou diretório a ser fechado.
  */
 void FAT_Close(FAT_File far* file);

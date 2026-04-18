@@ -4,7 +4,7 @@
 /** @brief Definição do tipo booleano e valores para C99.
  *  @file stdbool.h
  *  @author Gabryel-lima
- *  @date 2024-06
+ *  @date 2026-03
  */
 
 #ifndef __cplusplus

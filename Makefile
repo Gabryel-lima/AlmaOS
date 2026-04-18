@@ -25,13 +25,14 @@ STAGE1_DIR=$(SRC_DIR)/bootloader/stage1
 STAGE2_DIR=$(SRC_DIR)/bootloader/stage2
 KERNEL_DIR=$(SRC_DIR)/kernel
 PROTECTED_DIR=protected/src
+GFX_DIR=$(SRC_DIR)/gfx
 
 # Arquivos de saída
 # Note que passamos o caminho absoluto para o sub-make para que ele saiba onde salvar
 ABS_BUILD_DIR=$(shell pwd)/$(BUILD_DIR)
 
 # Declare phony targets to avoid conflitos com arquivos de mesmo nome
-.PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2
+.PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2 gfx
 
 #
 # Default target: build a floppy FAT12 image containing bootloader + kernel payload

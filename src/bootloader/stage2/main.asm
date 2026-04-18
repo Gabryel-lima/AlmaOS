@@ -6,11 +6,13 @@ extern _cstart
 global entry
 
 entry:
-    ; Configura uma stack fixa reservada para o stage2 e o kernel inicial
+    ; Configura a stack dentro do mesmo segmento de dados.
+    ; O modelo small do OpenWatcom exige SS == DS para que ponteiros near
+    ; de variaveis locais (stack) sejam acessados corretamente via DS.
     cli
-    mov ax, 0x7400
-    mov ss, ax
-    mov sp, 0x4000
+    mov ax, ds              ; DS ja configurado pelo stage1 (0x2000)
+    mov ss, ax              ; SS = DS (exigido pelo modelo small)
+    mov sp, 0xFFF0          ; stack no topo do segmento de 64KB, acima do codigo+dados (~10KB)
     mov bp, sp
     sti
 

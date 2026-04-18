@@ -3,7 +3,7 @@
 /** @brief Declarações de funções para operações de ponto flutuante no bootloader.
  *  @file stdfloat.h
  *  @author Gabryel-lima
- *  @date 2024-04-30
+ *  @date 2026-04-30
  */
 
 #ifndef ALMAOS_FLOAT_TYPES_DEFINED

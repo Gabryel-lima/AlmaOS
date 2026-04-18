@@ -1,22 +1,28 @@
-#include "../../bootloader/stage2/stdint.h"
-#include "../../bootloader/stage2/stddef.h"
-#include "../../bootloader/stage2/utility.h"
-
 /** @brief Tipos de ponteiro/índice genéricos.
  *  @author Gabriel-lima
- *  @date 2024-04-30
+ *  @date 2026-04-30
  *  @file generic_test.c
  *  Definidos como aliases para os tipos de tamanho apropriados (ex: uintptr_t, ptrdiff_t, size_t).
  *  Isso permite que as operações genéricas sejam aplicadas a ponteiros e índices sem precisar de
  *  macros separados.
- *  @note Esses tipos são usados para operações genéricas em ponteiros e índices, permitindo que as macros genéricas sejam aplicadas a eles sem precisar de casos separados.
+ *  @note Esses tipos são usados para operações genéricas em ponteiros e índices, 
+ *  permitindo que as macros genéricas sejam aplicadas a eles sem precisar de casos separados.
  */
+
+//#include "../../bootloader/stage2/stdint.h"
+//#include "../../bootloader/stage2/stddef.h"
+//#include "../../bootloader/stage2/utility.h"
+
+/** @warning Esta é uma implementação de teste genérica. Os includes devem ser próprios 
+ *  para testes específicos, e não devem incluir arquivos de estágio de bootloader.
+ *  E por enquanto estou com preguiça. TODO
+*/
 
 typedef size_t usize;
 typedef ptrdiff_t isize;
 typedef uintptr_t uptr;
 
-#include "../../kernel/include/generic_inst.h"
+#include "generic_inst.h"
 
 int main(void) {
     uint32_t a = 5, b = 7;

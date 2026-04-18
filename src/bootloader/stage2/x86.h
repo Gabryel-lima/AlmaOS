@@ -1,16 +1,15 @@
 #pragma once
 
-#include "stdint.h"
-#include "stdbool.h"
-
 /** @brief Declarações de funções utilitárias para o bootloader.
  *  @file x86.h
  *  @author Gabryel-lima
- *  @date 2024-06
+ *  @date 2026-03
  */
 
+#include "stdint.h"
+#include "stdbool.h"
+
 /** Divide um número de 64 bits por um número de 32 bits.
- *
  *  @param dividend: O dividendo de 64 bits.
  *  @param divisor: O divisor de 32 bits.
  *  @param quotientOut: Um ponteiro para armazenar o quociente de 64 bits.
@@ -20,27 +19,26 @@ void _cdecl x86_div64_32(uint64_t dividend,
                          uint32_t divisor, 
                          uint64_t* quotientOut, 
                          uint32_t* remainderOut);
+
 /** Escreve um caractere na tela usando o modo teletipo.
- *
  *  @param c: O caractere a ser escrito.
  *  @param page: A página de vídeo onde o caractere será escrito.
  */
 void _cdecl x86_Video_WriteCharTeletype(char c, uint8_t page);
+
 /** Salta para um endereco far e nao retorna.
- *
  *  @param segment: O segmento de destino.
  *  @param offset: O deslocamento de destino.
  */
 void _cdecl x86_FarJump(uint16_t segment, uint16_t offset);
+
 /** Reseta um disco.
- *
  *  @param drive: O número do drive a ser resetado.
  *  @return: true se o reset for bem-sucedido, false caso contrário.
  */
 bool _cdecl x86_Disk_Reset(uint8_t drive);
 
 /** Lê setores de um disco.
- *
  *  @param drive: O número do drive BIOS (ex.: 0x00 para floppy, 0x80 para HD).
  *  @param cylinder: O cilindro a ser lido.
  *  @param sector: O setor a ser lido.
@@ -57,7 +55,6 @@ bool _cdecl x86_Disk_Read(uint8_t drive,
                           void far * dataOut);
 
 /** Obtém os parâmetros de um drive.
- *
  *  @param drive: O número do drive BIOS (ex.: 0x00 para floppy, 0x80 para HD).
  *  @param driveTypeOut: Um ponteiro para armazenar o tipo do drive.
  *  @param cylindersOut: Um ponteiro para armazenar o número de cilindros.
@@ -72,7 +69,6 @@ bool _cdecl x86_Disk_GetDriveParams(uint8_t drive,
                                     uint16_t* headsOut);
 
 /** Obtém o mapa de memória E820 disponível na BIOS.
- *
  *  @param entriesOut: Buffer far onde as entradas E820 serão gravadas.
  *  @param entryCapacity: Número máximo de entradas no buffer.
  *  @param entryCountOut: Ponteiro para receber a quantidade efetiva de entradas.

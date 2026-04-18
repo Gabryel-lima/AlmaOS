@@ -27,7 +27,8 @@ sudo ./open-watcom-2_0-c-linux-x64
 
 ### Detalhes das Ferramentas:
 - **NASM**: O montador (assembler) usado para converter código Assembly em binários.
-- **Open Watcom v2**: Compilador C/C++ focado em sistemas legados e desenvolvimento de baixo nível (16/32-bit).
+- **GCC**: Compilador C usado para o kernel 32-bit (modo protegido, freestanding, `-m32 -std=c11`).
+- **Open Watcom v2**: Compilador C/C++ focado em sistemas legados e desenvolvimento de baixo nível (16/32-bit). Usado para o bootloader stage2.
 - **QEMU**: Emulador para testar o sistema operacional.
 - **mtools & dosfstools**: Usados para criar e manipular imagens de disco FAT12.
 - **Bochs**: Emulador de PC IA-32 (x86) útil para depuração avançada.
@@ -58,22 +59,50 @@ O projeto CMake apenas orquestra os alvos existentes do Makefile, então os dois
 
 ## ⚙️ Configuração do VS Code (IntelliSense)
 
-Para ter o preenchimento de código (IntelliSense) correto usando o **Watcom** em vez do GCC padrão, siga estes passos:
+O projeto possui dois ambientes de compilação distintos:
+- **Bootloader (stage2)**: compilado com **Open Watcom** (16-bit, modo real).
+- **Kernel**: compilado com **GCC** (32-bit, modo protegido, `-m32 -std=c11 -ffreestanding`).
 
-1. Pressione `Ctrl + Shift + P`.
-2. Procure e selecione **C/C++: Edit Configurations (UI)** (ícone de engrenagem).
-3. No painel que abrir, você pode criar ou editar um perfil para usar o compilador em `/usr/bin/watcom/binl/wcc`.
-4. Certifique-se de que o `cStandard` está definido como `c99` e o `intelliSenseMode` como `linux-gcc-x64` (ou compatível).
+Cada ambiente usa extensões de linguagem diferentes. O Watcom utiliza palavras-chave como `far`, `near`, `_cdecl` e `__interrupt`, enquanto o kernel GCC usa `__attribute__((packed))`, `__asm__ volatile(...)` e `static inline`. Uma configuração única de IntelliSense não reconheceria as duas ao mesmo tempo.
 
-Alternativamente, você pode criar o arquivo [.vscode/c_cpp_properties.json](.vscode/c_cpp_properties.json) com o seguinte conteúdo:
+### Configuração unificada (recomendada)
+
+O arquivo [.vscode/c_cpp_properties.json](.vscode/c_cpp_properties.json) inclui três perfis. O primeiro, **"AlmaOS"**, é o perfil padrão e funciona para ambos os ambientes: utiliza o GCC como compilador (o que permite ao IntelliSense entender `__attribute__` e `__asm__`) e define as palavras-chave do Watcom como macros vazias (o que evita erros falsos no código do bootloader).
 
 ```json
 {
     "configurations": [
         {
-            "name": "Watcom",
+            "name": "AlmaOS",
             "includePath": [
-                "${default}"
+                "${workspaceFolder}/src/kernel",
+                "${workspaceFolder}/src/kernel/include",
+                "${workspaceFolder}/src/bootloader/stage2"
+            ],
+            "defines": [
+                "_cdecl=",
+                "far=",
+                "near=",
+                "huge=",
+                "__far=",
+                "__near=",
+                "__huge=",
+                "__interrupt=",
+                "__watcall="
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "intelliSenseMode": "linux-gcc-x86",
+            "compilerArgs": [
+                "-m32",
+                "-ffreestanding",
+                "-nostdinc"
+            ]
+        },
+        {
+            "name": "Watcom (stage2 16-bit)",
+            "includePath": [
+                "${workspaceFolder}/src/bootloader/stage2"
             ],
             "defines": [
                 "_cdecl=",
@@ -93,13 +122,63 @@ Alternativamente, você pode criar o arquivo [.vscode/c_cpp_properties.json](.vs
             "compilerArgs": [
                 "-4 -d3 -s -wx -ms -zl -zq -nt=STAGE2_CODE"
             ]
+        },
+        {
+            "name": "Kernel (GCC 32-bit)",
+            "includePath": [
+                "${workspaceFolder}/src/kernel",
+                "${workspaceFolder}/src/kernel/include"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "intelliSenseMode": "linux-gcc-x86",
+            "compilerArgs": [
+                "-m32",
+                "-ffreestanding",
+                "-nostdinc",
+                "-nostdlib",
+                "-fno-builtin",
+                "-fno-stack-protector",
+                "-fno-pie"
+            ]
         }
     ],
     "version": 4
 }
 ```
 
-**Vantagem:** Isso evita que o VS Code aponte erros falsos relacionados a bibliotecas padrão do Linux/GCC que não existem no ambiente de 16-bit do AlmaOS, além de reconhecer corretamente as diretivas específicas do Watcom como `_cdecl`.
+### Alternando entre perfis
+
+Para alternar entre os perfis, clique no nome da configuração ativa na barra de status do VS Code (canto inferior direito, ao lado do ícone do C/C++) e selecione o perfil desejado:
+
+| Perfil | Quando usar |
+|---|---|
+| **AlmaOS** | Perfil padrão — funciona para kernel e bootloader ao mesmo tempo. |
+| **Watcom (stage2 16-bit)** | Quando quiser IntelliSense estrito do Watcom para o bootloader. |
+| **Kernel (GCC 32-bit)** | Quando quiser IntelliSense puro do GCC para o kernel. |
+
+### settings.json
+
+O arquivo [.vscode/settings.json](.vscode/settings.json) garante que o IntelliSense use o engine padrão (não o Tag Parser):
+
+```json
+{
+    "C_Cpp.intelliSenseEngine": "default"
+}
+```
+
+### Por que esses erros apareciam?
+
+O VS Code C/C++ IntelliSense aplica **uma única configuração** para todos os arquivos abertos. Quando o perfil ativo era o Watcom, o engine não reconhecia extensões do GCC usadas no kernel:
+
+- `__attribute__((packed))` → `expected a ';'`
+- `__asm__ volatile(...)` → `identifier "__asm__" is undefined`
+- Tipos definidos com `__attribute__` falhavam em cascata (`idt_entry_t`, `interrupt_frame_t`, etc.)
+
+O perfil **"AlmaOS"** resolve isso usando o GCC como compilador para o IntelliSense (que entende nativamente essas extensões) e definindo as palavras-chave do Watcom como macros vazias.
+
+**Vantagem:** Isso evita erros falsos tanto no código do kernel (extensões GCC) quanto no código do bootloader (palavras-chave Watcom), sem necessidade de trocar perfis manualmente.
 
 ## ⚙️ Configuração do tasks.json para Debug
 Para configurar o `tasks.json` para usar o Watcom durante a depuração, você pode criar ou editar o arquivo [.vscode/tasks.json](.vscode/tasks.json) com o seguinte conteúdo:
@@ -186,9 +265,11 @@ make debug
 
 ## 📂 Estrutura do Projeto
 
-- `src/bootloader/`: Contém o código do setor de boot.
-- `src/kernel/`: Contém o código principal do kernel.
+- `src/bootloader/`: Código do setor de boot (stage1 em Assembly, stage2 em C/Assembly com Watcom 16-bit).
+- `src/kernel/`: Código principal do kernel (C/Assembly com GCC 32-bit, modo protegido).
+- `src/gfx/`: Biblioteca gráfica auxiliar (CPU rasterizer e GPU via OpenGL/X11).
 - `build/`: Arquivos binários gerados e imagem final.
+- `.vscode/`: Configurações do VS Code (IntelliSense, tasks, launch).
 - `Makefile`: Script de automação do build.
 - `bochs_config`: Configurações para o emulador Bochs.
 

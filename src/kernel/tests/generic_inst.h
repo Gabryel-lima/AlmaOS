@@ -3,7 +3,7 @@
 
 /** @brief Instancia operações genéricas e define macros de função.
  *  @author Gabriel-lima
- *  @date 2024-04-30
+ *  @date 2026-04-30
  *  @file generic_inst.h
  *  AVISO: Este header instancia operações genéricas e define macros de
  * função (ex.: `min`, `max`, `swap`, `array_sum`, `array_find`) via

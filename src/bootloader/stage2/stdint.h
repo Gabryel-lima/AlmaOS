@@ -3,7 +3,7 @@
 /** @brief Tipos de inteiros padrão para C99 e definições de ponteiros para o bootloader.
  *  @file stdint.h
  *  @author Gabryel-lima
- *  @date 2024-06
+ *  @date 2026-03
  */
 
 #ifdef __INTELLISENSE__

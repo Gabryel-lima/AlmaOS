@@ -1,183 +1,140 @@
 # TODO do AlmaOS
 
 Este arquivo resume o que ainda precisa ser fechado para o sistema continuar evoluindo.
-O foco e manter o boot, o kernel e a futura camada grafica com contratos claros.
+O foco e manter o boot, o kernel e a camada grafica com contratos claros.
 
 ## Estado atual
 
-- O stage2 agora cobre carregamento de arquivos, testes de FAT e coleta do mapa de memoria em [src/bootloader/stage2/main.c](src/bootloader/stage2/main.c).
-- O fluxo de modo protegido/demo esta em [protected/src/main.asm](protected/src/main.asm).
-- O kernel basico de teste esta em [src/kernel/main.asm](src/kernel/main.asm).
+- O stage2 carrega `kernel.bin` para `0x1200:0x0000` e faz far-jump para la.
+- O kernel agora entra em modo protegido 32-bit, instala GDT flat, IDT com 48 vetores,
+  remapeia o PIC para `0x20-0x2F`, programa o PIT a ~100 Hz e habilita teclado via IRQ1.
+- A saida usa memoria VGA text mode direta (`0xB8000`, 80x25) com printf basico.
+- Um shell interativo aceita comandos: `help`, `clear`, `mem`, `ticks`, `reboot`.
+- A biblioteca `gfx` foi clonada em [src/gfx](src/gfx) e possui backends CPU/GPU (Linux)
+  e um novo backend bare-metal em [src/gfx/os/](src/gfx/os/) com API 2D e VGA.
+- O stage2 continua em modo real 16-bit com OpenWatcom, cobrindo FAT12, disco e mapa E820.
+- O demo de protected mode em [protected/src/main.asm](protected/src/main.asm) continua separado.
 
 ## 1. Base do sistema
 
-- [x] Fechar o contrato do boot: stage1 -> stage2 -> payload principal.
-- [x] Definir qual binario e o caminho oficial do sistema: `kernel.bin`, `protect.bin` ou um unico payload consolidado.
-- [x] Padronizar os argumentos de boot: drive, mapa de memoria, modo de video e ponteiros far.
-- [x] Criar tratamento unico de erro para boot, disco, FAT e carregamento.
+- [x] Fechar o contrato do boot: stage1 → stage2 → kernel.bin.
+- [x] Definir `kernel.bin` como caminho oficial; `protect.bin` e demo separado.
+- [x] Padronizar argumentos de boot: drive, mapa de memoria, modo de video e ponteiros far.
+- [x] Criar tratamento unico de erro: `panic`, `kassert` e log minimo.
 - [x] Separar claramente o que e demo do que e runtime real.
+- [x] Entrar em modo protegido 32-bit com GDT flat e far jump do bootstrap.
 
 ## 2. Memoria
 
-- [x] Ler e guardar o mapa de memoria da maquina ou do emulador.
-- [x] Criar um alocador simples para o kernel.
+- [x] Ler e guardar o mapa de memoria E820.
+- [x] Criar alocador bump para o kernel (stage2 valida heap contra E820).
 - [x] Reservar regioes fixas para stack, heap, buffers de I/O e framebuffer.
-- [x] Definir contratos de near/far e evitar overflow de 64 KB onde isso for uma limitacao real.
+- [x] Definir contratos de near/far e evitar overflow de 64 KB.
+- [ ] Criar alocador de paginas simples para modo protegido.
+- [ ] Implementar paginacao basica (identity mapping pelo menos ate 1 MB).
 
 ## 3. Entrada, tempo e depuracao
 
-- [ ] Implementar teclado com buffer e leitura nao bloqueante.
-- [ ] Programar o timer/PIT e expor ticks do sistema.
-- [ ] Se o caminho final for protegido, adicionar PIC, IDT e rotina de interrupcoes.
-- [ ] Criar `panic`, `assert` e um logger minimo para depuracao.
+- [x] Implementar teclado com buffer e leitura nao bloqueante (IRQ1, scancode set 1).
+- [x] Programar o PIT canal 0 a ~100 Hz e expor ticks do sistema.
+- [x] Adicionar PIC remapeado, IDT completa e rotinas de interrupcao (ISR 0-47).
+- [x] Criar `panic`, `kassert` e `klog` para depuracao.
+- [ ] Adicionar suporte a Caps Lock e teclas especiais (setas, F1-F12, Delete).
+- [ ] Implementar um timer de alta resolucao ou sleep baseado em ticks.
+- [ ] Adicionar serial port (COM1) como saida alternativa de log.
 
 ## 4. Disco e arquivos
 
-- [ ] Terminar a camada de disco com leitura robusta e erros consistentes.
-- [ ] Consolidar FAT em uma API de arquivo mais limpa.
-- [ ] Definir como recursos serao carregados do disco: fontes, sprites, imagens e configuracoes.
-- [ ] Escolher um formato simples para assets: raw, BMP, TGA ou um formato proprio.
+- [x] Camada de disco robusta no stage2 (retry, CHS, LBA).
+- [x] FAT12 funcional para carregar arquivos no boot.
+- [ ] Implementar leitura de disco em modo protegido (FDC via I/O ports ou ATA PIO).
+- [ ] Portar a API FAT para o kernel 32-bit.
+- [ ] Definir como recursos serao carregados do disco: fontes, sprites, configuracoes.
+- [ ] Escolher formato de assets: raw, BMP, TGA ou formato proprio.
+- [ ] Definir nomenclatura e contrato da pasta de assets no disco.
 
-## 5. API grafica: decisao obrigatoria
+## 5. API grafica
 
-Antes de implementar menus, janelas, cursor, HUD ou sprites, a camada grafica precisa ser definida.
-Nao vale espalhar chamadas de video pelo kernel inteiro.
+A `gfx` foi clonada para `src/gfx/` e organizada como biblioteca local em C.
 
-Neste projeto, a direcao preferida e clonar a `gfx` para dentro do repositorio e seguir com ela como
-uma biblioteca local em C, organizada de forma mais limpa por modulos, em vez de deixar a logica
-grafica espalhada pelo kernel.
+### Estrutura no repo
 
-### Estrutura sugerida no repo
+- `src/gfx/include/` — API publica (`gfx.h`, `gfx_math.h`).
+- `src/gfx/cpu/` — Backend CPU com framebuffer e rasterizador.
+- `src/gfx/gpu/` — Backend GPU/OpenGL (Linux/X11).
+- `src/gfx/os/` — Backend bare-metal para AlmaOS:
+  - `gfx2d.h` / `gfx2d.c` — API 2D: `gfx2d_init`, `gfx2d_clear`, `gfx2d_put_pixel`,
+    `gfx2d_fill_rect`, `gfx2d_draw_line`, `gfx2d_blit`, `gfx2d_draw_text`, `gfx2d_present`.
+  - `vga_backend.h` / `vga_backend.c` — Acesso direto a VGA mode 13h e paleta DAC.
+- `src/gfx/src/` — Codigo compartilhado (math, stubs, tinyobj).
+- `src/gfx/tests/` — Testes e programas de validacao.
 
-Uma divisao inicial que tende a ficar mais limpa aqui e esta:
+### O que ja existe
 
-- `src/gfx/include/` para a API publica.
-- `src/gfx/core/` para tipos basicos, estado global e contratos comuns.
-- `src/gfx/backend/` para a ponte com VGA, VBE, BIOS, framebuffer ou outro backend escolhido.
-- `src/gfx/render/` para primitivas de desenho, texto, blit e composicao.
-- `src/gfx/assets/` para carregamento e validacao de recursos visuais.
-- `src/gfx/tests/` para testes ou programas de validacao fora do kernel.
+- [x] API 2D definida em `gfx2d.h` com contexto explicito.
+- [x] Primitivas: pixel, retangulo, linha (Bresenham), blit, texto com fonte 8x8.
+- [x] Double buffering via backbuffer.
+- [x] Backend VGA com acesso direto ao framebuffer 0xA0000 e paleta DAC.
+- [x] Fonte bitmap 8x8 embutida (ASCII 32-126, 95 glifos).
 
-Essa separacao ajuda a evitar um unico arquivo grande e deixa claro o que e API, o que e backend e o
-que e logica de renderizacao.
+### O que falta
 
-### Responsabilidades da gfx
+- [ ] Implementar trampolim de modo real para BIOS `int 10h` (trocar modo de video).
+- [ ] Ativar VGA mode 13h (320x200, 256 cores) a partir do kernel.
+- [ ] Integrar `gfx2d` no kernel principal como modulo opcional.
+- [ ] Implementar clipping robusto para todas as primitivas.
+- [ ] Adicionar suporte a VBE/VESA para resolucoes maiores.
+- [ ] Criar carregador de sprites e bitmaps a partir de arquivos no disco.
+- [ ] Testar e validar o rasterizador de triangulos do backend CPU.
 
-A `gfx` deve ser a unica porta de entrada para a camada visual do projeto. O kernel nao deve chamar
-rotinas de video dispersas diretamente, exceto em adaptadores muito finos.
+### Contrato minimo
 
-Responsabilidades centrais:
-
-- inicializar o modo de video e expor o framebuffer;
-- manter o estado do contexto grafico;
-- desenhar primitivos simples;
-- carregar e apresentar texto e recursos;
-- esconder detalhes do backend usado em cada ambiente.
-
-Responsabilidades que nao devem ficar na gfx:
-
-- logica de shell;
-- regras de boot;
-- leitura de disco;
-- gerenciamento geral de memoria do kernel;
-- politica de multitarefa.
-
-### Opcao A: backend externo ou do firmware
-
-Usar uma API ja existente para abrir video no boot ou em um backend de teste.
-
-Exemplos:
-
-- BIOS `int 10h` / VBE para setar modo grafico em 16-bit.
-- UEFI GOP se o projeto migrar para UEFI no futuro.
-- SDL2 apenas como backend de teste no host ou no emulador, nao como dependencia do kernel final.
-- VGA text mode ou framebuffer linear como etapa de arranque enquanto a API final nao existe.
-
-### Opcao B: a nossa API `gfx` em C
-
-Consolidar uma camada propria e manter o kernel falando apenas com ela.
-Aqui esta a opcao que melhor encaixa no projeto: trazer a `gfx` para este repo e evoluir como lib
-interna, com separacao clara entre API publica, renderer, backend e recursos.
-
-Exemplo de contrato minimo:
-
-- `gfx_init(...)`
-- `gfx_set_mode(...)`
-- `gfx_put_pixel(...)`
-- `gfx_fill_rect(...)`
-- `gfx_draw_line(...)`
-- `gfx_blit(...)`
-- `gfx_draw_text(...)`
-- `gfx_present(...)`
-
-Exemplo de uso:
-
-```c
-gfx_init(&fb);
-gfx_clear(0x000000);
-gfx_draw_text(8, 8, "AlmaOS", 0xFFFFFF);
-gfx_fill_rect(16, 32, 120, 24, 0x0044AA);
-gfx_present();
-```
-
-Se a escolha for `gfx`, ela tambem precisa definir:
-
-- formato do framebuffer;
-- largura, altura e pitch;
-- bpp e ordem dos canais;
-- clipping;
-- double buffering;
-- carregamento de recursos como bitmap, fonte e sprite.
-- estrutura dos modulos da biblioteca, para nao virar um arquivo unico gigante.
-
-### Contrato minimo da biblioteca
-
-Para nao virar apenas um conjunto de funcoes soltas, a `gfx` deveria nascer com estes blocos:
-
-- `gfx.h` como face publica da biblioteca;
-- um contexto grafico explicito, passado por referencia quando fizer sentido;
-- backend isolado por plataforma;
-- renderizador independente do backend;
-- carregadores de recursos separados por formato.
-
-Exemplo de organizacao conceitual:
-
-- `gfx_context` para estado atual;
-- `gfx_surface` para buffers de desenho;
-- `gfx_backend` para acesso ao video real;
-- `gfx_font` e `gfx_sprite` para recursos carregados;
-- `gfx_draw_*` para primitivas de renderizacao.
+O kernel nao chama rotinas de video dispersas. Toda saida visual passa por:
+- `vga.c` para modo texto (shell, panic, log).
+- `gfx2d` para modo grafico (quando ativado).
 
 ### Ordem de implementacao recomendada
 
-1. Definir a API publica minima.
-2. Implementar um backend simples de framebuffer ou VGA text mode.
-3. Criar desenho de pixel, retangulo e linha.
-4. Adicionar texto e fonte bitmap.
-5. Integrar blit e sprites.
-6. Sair do modo de teste para integrar ao kernel principal.
+1. ~~Definir API publica minima.~~ ✓
+2. ~~Implementar backend VGA text mode.~~ ✓
+3. ~~Criar primitivas de pixel, retangulo, linha.~~ ✓
+4. ~~Adicionar texto com fonte bitmap 8x8.~~ ✓
+5. Implementar trampolim real-mode e ativar mode 13h.
+6. Integrar blit, sprites e carregamento de recursos.
+7. Sair do modo de teste para integrar ao kernel principal.
 
 ## 6. Recursos graficos
 
 - [ ] Definir como os recursos vao ser empacotados no disco.
-- [ ] Criar loader para bitmap, fonte e sprite.
+- [ ] Criar loader para bitmap, fonte e sprite (requer disco no kernel).
 - [ ] Implementar cache simples para recursos carregados.
-- [ ] Definir nomeclatura e contrato da pasta de assets.
+- [ ] Definir nomenclatura e contrato da pasta de assets.
 
 ## 7. Runtime do sistema
 
-- [ ] Criar shell ou prompt minimo.
-- [ ] Expor comandos basicos para listar arquivos, abrir recursos e testar video.
+- [x] Criar shell minimo com prompt, leitura de teclado e execucao de comandos.
+- [x] Comandos basicos: `help`, `clear`, `mem`, `ticks`, `reboot`.
+- [ ] Adicionar comando para listar arquivos do disco (requer FAT no kernel).
+- [ ] Adicionar comando para trocar modo de video (requer trampolim).
 - [ ] Planejar multitarefa somente depois do kernel estar estavel.
 - [ ] Documentar a ordem correta de prioridade para evitar trabalho espalhado.
 
-## 8. Criterio de pronto
+## 8. Build e infraestrutura
+
+- [x] Makefile do kernel compila bootstrap 16-bit + C 32-bit com GCC/NASM/LD.
+- [x] Imagem de floppy FAT12 com stage1 + stage2 + kernel.bin.
+- [x] CMake wrapping os targets do Makefile com CTest.
+- [ ] Adicionar target `make gfx-test` para compilar e rodar testes do gfx no host.
+- [ ] Adicionar CI para build automatico (GCC -m32 + NASM + OpenWatcom).
+- [ ] Adicionar target `make run-graphics` para testar modo grafico no QEMU.
+
+## 9. Criterio de pronto
 
 O projeto passa de fase quando existir:
 
-- boot previsivel;
-- kernel carregado de forma consistente;
-- memoria base e interrupcoes sob controle;
-- API grafica escolhida e isolada;
-- recursos carregados por uma rota unica;
-- um fluxo de depuracao que nao dependa de suposicao.
+- [x] Boot previsivel (stage1 → stage2 → kernel em modo protegido).
+- [x] Kernel carregado de forma consistente com IDT, PIC e PIT.
+- [x] Memoria base e interrupcoes sob controle.
+- [x] API grafica escolhida e isolada (gfx2d no repo, backend VGA definido).
+- [ ] Recursos carregados por uma rota unica (disco no kernel).
+- [x] Fluxo de depuracao que nao dependa de suposicao (panic, assert, klog, shell).
