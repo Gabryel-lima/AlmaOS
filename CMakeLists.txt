@@ -28,6 +28,7 @@ add_almaos_make_target(fat fat)
 add_almaos_make_target(run run)
 add_almaos_make_target(debug debug)
 add_almaos_make_target(test_includes test-includes)
+add_almaos_make_target(root root)
 add_almaos_make_target(tests tests)
 
 enable_testing()

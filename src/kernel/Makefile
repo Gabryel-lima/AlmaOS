@@ -13,7 +13,7 @@ LDFLAGS  := -m elf_i386 -T linker.ld --no-warn-rwx-segments
 BOOT_SRC    := boot.asm
 ENTRY_SRC   := entry.asm
 ISR_SRC     := isr_stubs.asm
-C_SOURCES   := kernel_main.c vga.c idt.c pic.c pit.c keyboard.c panic.c shell.c string.c
+C_SOURCES   := kernel_main.c vga.c idt.c pic.c pit.c keyboard.c panic.c shell.c string.c root/echo.c
 
 # Artefatos intermediarios
 BOOT_BIN    := $(BUILD_DIR)/kernel/boot.bin
@@ -58,6 +58,7 @@ always:
 	@mkdir -p $(BUILD_DIR)/kernel
 	@mkdir -p $(BUILD_DIR)/kernel/asm
 	@mkdir -p $(BUILD_DIR)/kernel/c
+	@mkdir -p $(BUILD_DIR)/kernel/c/root
 
 clean:
 	rm -rf $(BUILD_DIR)/kernel

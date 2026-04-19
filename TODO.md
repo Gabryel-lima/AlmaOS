@@ -14,6 +14,7 @@ O foco e manter o boot, o kernel e a camada grafica com contratos claros.
   e um novo backend bare-metal em [src/gfx/os/](src/gfx/os/) com API 2D e VGA.
 - O stage2 continua em modo real 16-bit com OpenWatcom, cobrindo FAT12, disco e mapa E820.
 - O demo de protected mode em [protected/src/main.asm](protected/src/main.asm) continua separado.
+- O shell usa tabela de dispatch com tokenizador de argc/argv; comandos portaveis vivem em `src/kernel/root/`.
 
 ## 1. Base do sistema
 
@@ -114,8 +115,15 @@ O kernel nao chama rotinas de video dispersas. Toda saida visual passa por:
 
 - [x] Criar shell minimo com prompt, leitura de teclado e execucao de comandos.
 - [x] Comandos basicos: `help`, `clear`, `mem`, `ticks`, `reboot`.
-- [ ] Adicionar comando para listar arquivos do disco (requer FAT no kernel).
-- [ ] Adicionar comando para trocar modo de video (requer trampolim).
+- [x] Refatorar shell para tabela de dispatch (`cmd_table[]`) com `int fn(int argc, char **argv)`.
+- [x] Tokenizador de linha de comando (popula `argc`/`argv` a partir de `cmd_buf`).
+- [x] Separar comandos portaveis em `root/` (cada arquivo compila como objeto independente).
+- [x] Implementar `echo` como primeiro comando em `root/`.
+- [ ] Adicionar comando `ls` para listar arquivos do disco (requer FAT no kernel).
+- [ ] Adicionar comando `cat` para exibir conteudo de arquivo (requer FAT no kernel).
+- [ ] Adicionar comando `mode` para trocar modo de video (requer trampolim real-mode).
+- [ ] Adicionar historico de comandos (seta para cima/baixo).
+- [ ] Adicionar autocompletar por Tab baseado na `cmd_table`.
 - [ ] Planejar multitarefa somente depois do kernel estar estavel.
 - [ ] Documentar a ordem correta de prioridade para evitar trabalho espalhado.
 

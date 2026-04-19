@@ -7,11 +7,25 @@
 #include "include/string.h"
 #include "include/io.h"
 
-#define CMD_MAX_LEN 64
-#define PROMPT "AlmaOS> "
+#include "root/echo.h"
 
-static char cmd_buf[CMD_MAX_LEN];
-static int  cmd_len;
+#define CMD_MAX_LEN 64      // Tamanho máximo do comando (incluindo null terminator)
+#define PROMPT "AlmaOS> "   // Prompt do shell
+
+// Tipo de função para comandos builtin
+typedef int (*cmd_fn_t)(int argc, char **argv);
+
+/** Estrutura para entrada de comando builtin 
+ *  @param name Nome do comando (ex: "help")
+ *  @param fn Ponteiro para a função que implementa o comando
+*/
+typedef struct cmd_entry_t { 
+    const char *name; // Nome do comando
+    cmd_fn_t fn;      // Ponteiro para a função que implementa o comando
+} cmd_entry_t;
+
+static char cmd_buf[CMD_MAX_LEN]; // Buffer para armazenar o comando digitado pelo usuário
+static int  cmd_len;    // Comprimento atual do comando no buffer
 
 static const char *e820_type_str(uint32_t type) {
     switch (type) {
@@ -24,16 +38,26 @@ static const char *e820_type_str(uint32_t type) {
     }
 }
 
-static void cmd_help(void) {
+static int cmd_help(int argc, char **argv) {
+    (void)argc; (void)argv;
     vga_puts("Comandos disponiveis:\n");
     vga_puts("  help   - mostra esta ajuda\n");
     vga_puts("  clear  - limpa a tela\n");
     vga_puts("  mem    - mostra mapa de memoria e heap\n");
     vga_puts("  ticks  - mostra ticks do PIT\n");
     vga_puts("  reboot - reinicia o sistema\n");
+    vga_puts("  echo   - exibe texto (ex: echo Hello)\n");
+    return 0;
 }
 
-static void cmd_mem(void) {
+static int cmd_clear(int argc, char **argv) {
+    (void)argc; (void)argv;
+    vga_clear();
+    return 0;
+}
+
+static int cmd_mem(int argc, char **argv) {
+    (void)argc; (void)argv;
     const boot_info_raw_t *bi = boot_info_get();
     const e820_entry_t *entries = boot_info_e820_entries();
 
@@ -50,20 +74,35 @@ static void cmd_mem(void) {
 
     vga_printf("Kernel heap: base=0x%08x, size=%u, used=%u\n",
                bi->heap_base, bi->heap_capacity, bi->heap_offset);
+    return 0;
 }
 
-static void cmd_ticks(void) {
+static int cmd_ticks(int argc, char **argv) {
+    (void)argc; (void)argv;
     vga_printf("System ticks: %u\n", pit_get_ticks());
+    return 0;
 }
 
-static void cmd_reboot(void) {
+static int cmd_reboot(int argc, char **argv) {
+    (void)argc; (void)argv;
     vga_puts("Reiniciando...\n");
-    /* pulsa a linha de reset via controlador de teclado */
     outb(0x64, 0xFE);
-    /* se falhar, triple fault */
     cli();
     for (;;) halt();
+    return 0;
 }
+
+static const cmd_entry_t cmd_table[] = {
+    {"help",   cmd_help},
+    {"clear",  cmd_clear},
+    {"mem",    cmd_mem},
+    {"ticks",  cmd_ticks},
+    {"reboot", cmd_reboot},
+    {"echo",   echo},
+};
+
+// Número de comandos na tabela (calculado automaticamente)
+#define CMD_TABLE_SIZE (sizeof(cmd_table) / sizeof(cmd_table[0]))
 
 static void execute_cmd(void) {
     cmd_buf[cmd_len] = '\0';
@@ -71,18 +110,29 @@ static void execute_cmd(void) {
     if (cmd_len == 0)
         return;
 
-    if (strcmp(cmd_buf, "help") == 0)
-        cmd_help();
-    else if (strcmp(cmd_buf, "clear") == 0)
-        vga_clear();
-    else if (strcmp(cmd_buf, "mem") == 0)
-        cmd_mem();
-    else if (strcmp(cmd_buf, "ticks") == 0)
-        cmd_ticks();
-    else if (strcmp(cmd_buf, "reboot") == 0)
-        cmd_reboot();
-    else
-        vga_printf("Comando desconhecido: %s\n", cmd_buf);
+    /* Tokenizar cmd_buf em argv (modifica in-place) */
+    char *argv[16];
+    int argc = 0;
+    char *p = cmd_buf;
+
+    while (*p && argc < 16) {
+        while (*p == ' ') p++;
+        if (!*p) break;
+        argv[argc++] = p;
+        while (*p && *p != ' ') p++;
+        if (*p) *p++ = '\0';
+    }
+
+    if (argc == 0)
+        return;
+
+    for (size_t i = 0; i < CMD_TABLE_SIZE; i++) {
+        if (strcmp(argv[0], cmd_table[i].name) == 0) {
+            cmd_table[i].fn(argc, argv);
+            return;
+        }
+    }
+    vga_printf("Comando desconhecido: %s\n", argv[0]);
 }
 
 void shell_init(void) {

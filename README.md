@@ -267,11 +267,28 @@ make debug
 
 - `src/bootloader/`: Código do setor de boot (stage1 em Assembly, stage2 em C/Assembly com Watcom 16-bit).
 - `src/kernel/`: Código principal do kernel (C/Assembly com GCC 32-bit, modo protegido).
+  - `src/kernel/root/`: Comandos do shell com assinatura portável `int fn(int argc, char **argv)`. Cada arquivo é compilado como objeto independente e registrado na tabela de dispatch do shell.
 - `src/gfx/`: Biblioteca gráfica auxiliar (CPU rasterizer e GPU via OpenGL/X11).
 - `build/`: Arquivos binários gerados e imagem final.
 - `.vscode/`: Configurações do VS Code (IntelliSense, tasks, launch).
 - `Makefile`: Script de automação do build.
 - `bochs_config`: Configurações para o emulador Bochs.
+
+### Shell e comandos
+
+O shell usa uma tabela de dispatch (`cmd_table[]`) em vez de uma cadeia `if/else`. Cada entrada associa um nome de comando a um ponteiro de função com assinatura `int fn(int argc, char **argv)`.
+
+**Builtins** (estáticos em `shell.c`, dependem do estado interno do kernel):
+- `help`, `clear`, `mem`, `ticks`, `reboot`
+
+**Comandos externos** (compilados em `root/`, declarados via header próprio):
+- `echo` — `root/echo.c` / `root/echo.h`
+
+Para adicionar um novo comando:
+1. Crie `src/kernel/root/meu_cmd.c` com `int meu_cmd(int argc, char **argv)`.
+2. Crie `src/kernel/root/meu_cmd.h` com a declaração.
+3. Adicione `root/meu_cmd.c` em `C_SOURCES` no `src/kernel/Makefile`.
+4. Inclua o header em `shell.c` e adicione a entrada na `cmd_table[]`.
 
 ---
 Desenvolvido para fins educacionais.
