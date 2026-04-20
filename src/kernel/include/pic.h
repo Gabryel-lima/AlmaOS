@@ -22,26 +22,23 @@
 #define PIC_MASTER_OFFSET   0x20    /* IRQ 0-7  → INT 0x20-0x27 */
 #define PIC_SLAVE_OFFSET    0x28    /* IRQ 8-15 → INT 0x28-0x2F */
 
-/** Remapeia o PIC para que IRQs nao colidam com excecoes da CPU. 
- *  @param master_offset: Offset para o PIC mestre (normalmente 0x20).
- *  @param slave_offset: Offset para o PIC escravo (normalmente 0x28).
-*/
+/** @brief Remapeia o PIC para que IRQs nao colidam com excecoes da CPU.
+ *  @param master_offset Offset para o PIC mestre (normalmente 0x20).
+ *  @param slave_offset Offset para o PIC escravo (normalmente 0x28).
+ */
 void pic_remap(uint8_t master_offset, uint8_t slave_offset);
 
-/** Envia End-Of-Interrupt para o PIC correto. 
- *  @param irq: Numero da IRQ que foi atendida (0-15). O PIC mestre 
- *  é responsável por IRQs 0-7, e o PIC escravo por IRQs 8-15.
-*/
+/** @brief Envia End-Of-Interrupt para o PIC correto.
+ *  @param irq Numero da IRQ atendida (0-7 = mestre, 8-15 = escravo).
+ */
 void pic_send_eoi(uint8_t irq);
 
-/** Mascara (desabilita) uma IRQ especifica. 
- *  @param irq: Numero da IRQ a ser mascarada (0-15). 
- *  O PIC mestre é responsável por IRQs 0-7, e o PIC escravo por IRQs 8-15.
-*/
+/** @brief Mascara (desabilita) uma IRQ especifica.
+ *  @param irq Numero da IRQ a mascarar (0-15).
+ */
 void pic_set_mask(uint8_t irq);
 
-/** Desmascara (habilita) uma IRQ especifica. 
- *  @param irq: Numero da IRQ a ser desmascarada (0-15). 
- *  O PIC mestre é responsável por IRQs 0-7, e o PIC escravo por IRQs 8-15.
-*/
+/** @brief Desmascara (habilita) uma IRQ especifica.
+ *  @param irq Numero da IRQ a desmascarar (0-15).
+ */
 void pic_clear_mask(uint8_t irq);

@@ -11,20 +11,20 @@
 
 #include "kernel.h"
 
-/** Para o sistema com mensagem de erro fatal. Nao retorna. 
- *  @param msg: Mensagem de erro a ser exibida (pode ser um literal string ou uma string formatada).
-*/
+/** @brief Para o sistema com mensagem de erro fatal. Nao retorna.
+ *  @param msg Mensagem de erro a ser exibida.
+ */
 void panic(const char *msg) __attribute__((noreturn));
 
-/** Assert simples. Se a condicao falhar, executa panic. 
- *  @param cond: Condicao a ser verificada. Se for falsa, o kernel panica com a mensagem fornecida.
- *  @param msg: Mensagem de erro a ser exibida se a condicao falhar (pode ser um literal string ou uma string formatada).
-*/
+/** @brief Assert simples. Se a condicao falhar, executa panic.
+ *  @param cond Condicao a ser verificada.
+ *  @param msg Mensagem de erro exibida se cond for falsa.
+ */
 #define kassert(cond, msg) \
     do { if (!(cond)) panic("ASSERT FAILED: " msg); } while (0)
 
-/** Log minimo para depuracao (imprime no VGA com prefixo [LOG]). 
- *  @param fmt: String de formato (similar a printf) para a mensagem de log.
- *  @param ...: Argumentos adicionais para a string de formato.
-*/
+/** @brief Log minimo para depuracao (imprime no VGA com prefixo [LOG]).
+ *  @param fmt String de formato (similar a printf).
+ *  @param ... Argumentos adicionais para a string de formato.
+ */
 void klog(const char *fmt, ...);

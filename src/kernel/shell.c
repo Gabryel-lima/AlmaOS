@@ -92,6 +92,7 @@ static int cmd_reboot(int argc, char **argv) {
     return 0;
 }
 
+// Disparador de comandos: procura o comando na tabela e executa a função associada
 static const cmd_entry_t cmd_table[] = {
     {"help",   cmd_help},
     {"clear",  cmd_clear},
@@ -105,8 +106,11 @@ static const cmd_entry_t cmd_table[] = {
 #define CMD_TABLE_SIZE (sizeof(cmd_table) / sizeof(cmd_table[0]))
 
 static void execute_cmd(void) {
+    /* Insere terminador nulo no final do comando */
     cmd_buf[cmd_len] = '\0';
 
+    /* Se o usuário pressionou Enter sem digitar 
+       nada, sai imediatamente */
     if (cmd_len == 0)
         return;
 
@@ -115,12 +119,13 @@ static void execute_cmd(void) {
     int argc = 0;
     char *p = cmd_buf;
 
+    /* Tokenizar cmd_buf em argv (modifica in-place) */
     while (*p && argc < 16) {
-        while (*p == ' ') p++;
-        if (!*p) break;
-        argv[argc++] = p;
-        while (*p && *p != ' ') p++;
-        if (*p) *p++ = '\0';
+        while (*p == ' ') p++; // pula espaços
+        if (!*p) break;        // fim da string
+        argv[argc++] = p; // salva início do token
+        while (*p && *p != ' ') p++; // avança até o próximo espaço
+        if (*p) *p++ = '\0'; // substitui espaço por '\0', separando os tokens
     }
 
     if (argc == 0)
@@ -152,6 +157,7 @@ void shell_run(void) {
             execute_cmd();
             cmd_len = 0;
             vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+            if (vga_get_col() != 0) vga_putchar('\n');
             vga_puts(PROMPT);
             vga_set_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
         } else if (c == '\b') {

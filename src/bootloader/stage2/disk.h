@@ -15,25 +15,25 @@
  *  @param sectors: Número de setores por trilha
  *  @param heads: Número de cabeças do disco
 */
-typedef struct DISK {
+typedef struct disk_t {
     uint8_t id; // Número do drive BIOS (ex.: 0x00 para floppy, 0x80 para HD)
     uint16_t cylinders; // Número de cilindros do disco
     uint16_t sectors;   // Número de setores por trilha
     uint16_t heads;     // Número de cabeças do disco
-} DISK;
+} disk_t;
 
 /** Inicializa um disco lendo seus parâmetros (cilindros, setores, cabeças) usando a BIOS.
- *  @param disk: Um ponteiro para a estrutura DISK a ser inicializada.
+ *  @param disk: Um ponteiro para a estrutura disk_t a ser inicializada.
  *  @param driveNumber: O número do drive BIOS a ser inicializado (ex.: 0x00 para floppy, 0x80 para HD).
  *  @return: true se a inicialização for bem-sucedida, false caso contrário.
  */
-bool DISK_Initialize(DISK* disk, uint8_t driveNumber);
+bool DISK_Initialize(disk_t* disk, uint8_t driveNumber);
 
 /** Lê setores de um disco usando endereçamento LBA.
- *  @param disk: Um ponteiro para a estrutura DISK.
+ *  @param disk: Um ponteiro para a estrutura disk_t.
  *  @param lba: O endereço LBA do primeiro setor a ser lido.
  *  @param sectors: O número de setores a serem lidos.
  *  @param dataOut: Um ponteiro para o buffer onde os dados lidos serão armazenados.
  *  @return: true se a leitura for bem-sucedida, false caso contrário.
  */
-bool DISK_ReadSectors(DISK* disk, uint32_t lba, uint8_t sectors, void far* dataOut);
+bool DISK_ReadSectors(disk_t* disk, uint32_t lba, uint8_t sectors, void far* dataOut);

@@ -16,22 +16,19 @@
 
 #define PIT_DEFAULT_FREQ    100     /* Hz */
 
-/** Inicializa o PIT no canal 0 com a frequencia desejada em Hz. 
- *  @param frequency: Frequencia desejada para as interrupcoes do PIT (em Hz).
- *  O valor de divisor é calculado como divisor = PIT_BASE_FREQ / frequency, 
- *  onde PIT_BASE_FREQ é a frequencia de entrada do PIT (normalmente 1193182 Hz).
-*/
+/** @brief Inicializa o PIT no canal 0 com a frequencia desejada em Hz.
+ *  @details O divisor e calculado como PIT_BASE_FREQ / frequency, onde PIT_BASE_FREQ = 1193182 Hz.
+ *  @param frequency Frequencia desejada para as interrupcoes (em Hz).
+ */
 void pit_init(uint32_t frequency);
 
-/** Retorna o contador global de ticks desde o boot. 
- *  Este contador é incrementado a cada interrupcao do PIT (IRQ 0), 
- *  e pode ser usado para medir o tempo decorrido ou implementar temporizadores.
-*/
+/** @brief Retorna o contador global de ticks desde o boot.
+ *  @note Incrementado a cada interrupcao do PIT (IRQ 0). Pode ser usado para medir tempo.
+ *  @return Numero de ticks acumulados desde a inicializacao.
+ */
 uint32_t pit_get_ticks(void);
 
-/** Handler chamado pelo dispatcher de interrupcoes (IRQ 0). 
- *  Este handler deve ser registrado na IDT para o vetor 
- *  correspondente ao IRQ 0 (normalmente INT 0x20 ou 0x30, 
- *  dependendo do remapeamento do PIC).
-*/
+/** @brief Handler do PIT chamado pelo dispatcher de interrupcoes (IRQ 0).
+ *  @note Registrar na IDT para INT 0x20 (apos remapeamento do PIC).
+ */
 void pit_handler(void);

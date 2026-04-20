@@ -40,7 +40,10 @@ O foco e manter o boot, o kernel e a camada grafica com contratos claros.
 - [x] Programar o PIT canal 0 a ~100 Hz e expor ticks do sistema.
 - [x] Adicionar PIC remapeado, IDT completa e rotinas de interrupcao (ISR 0-47).
 - [x] Criar `panic`, `kassert` e `klog` para depuracao.
-- [ ] Adicionar suporte a Caps Lock e teclas especiais (setas, F1-F12, Delete).
+- [x] Implementar layout ABNT2 com tabelas completas (normal, shift, AltGr, tecla extra 0x73).
+- [x] Adicionar Caps Lock (toggle), AltGr (Right Alt) e rastreamento de prefixo 0xE0.
+- [x] Implementar `getopt()` e `getopt_long()` para parsing de opcoes em builtins (`getopt.c` / `getopt.h`).
+- [ ] Adicionar suporte a teclas especiais como eventos distintos (setas, F1-F12, Delete).
 - [ ] Implementar um timer de alta resolucao ou sleep baseado em ticks.
 - [ ] Adicionar serial port (COM1) como saida alternativa de log.
 
@@ -118,7 +121,8 @@ O kernel nao chama rotinas de video dispersas. Toda saida visual passa por:
 - [x] Refatorar shell para tabela de dispatch (`cmd_table[]`) com `int fn(int argc, char **argv)`.
 - [x] Tokenizador de linha de comando (popula `argc`/`argv` a partir de `cmd_buf`).
 - [x] Separar comandos portaveis em `root/` (cada arquivo compila como objeto independente).
-- [x] Implementar `echo` como primeiro comando em `root/`.
+- [x] Implementar `echo` como primeiro comando em `root/` (com flags `-n`/`--no-newline` e `-h`/`--help`).
+- [x] Implementar primitivas genericas type-safe (`generic.h`, `generic_inst.h`) com testes no host.
 - [ ] Adicionar comando `ls` para listar arquivos do disco (requer FAT no kernel).
 - [ ] Adicionar comando `cat` para exibir conteudo de arquivo (requer FAT no kernel).
 - [ ] Adicionar comando `mode` para trocar modo de video (requer trampolim real-mode).

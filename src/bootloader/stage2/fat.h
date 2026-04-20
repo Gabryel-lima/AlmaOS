@@ -12,7 +12,7 @@
 #pragma pack(push, 1)
 
 /** Estrutura que representa uma entrada de diretório da FAT. */
-typedef struct FAT_DirectoryEntry {
+typedef struct fat_dir_entry_t {
     uint8_t Name[11];   // Nome do arquivo (8.3)
     uint8_t Attributes; // Atributos do arquivo
     uint8_t _Reserved; // Reservado
@@ -25,7 +25,7 @@ typedef struct FAT_DirectoryEntry {
     uint16_t ModifiedDate; // Data da última modificação
     uint16_t FirstClusterLow; // Número do primeiro cluster (parte baixa)
     uint32_t Size; // Tamanho do arquivo em bytes
-} FAT_DirectoryEntry;
+} fat_dir_entry_t;
 
 #pragma pack(pop)
 
@@ -37,12 +37,12 @@ typedef struct FAT_DirectoryEntry {
  *  @param Position: Posição atual de leitura em bytes
  *  @param Size: Tamanho do arquivo em bytes
  */
-typedef struct FAT_File {
+typedef struct fat_file_t {
     int Handle;         // Índice interno do arquivo aberto, ou ROOT_DIRECTORY_HANDLE para a raiz
     bool IsDirectory;   // true para diretórios, false para arquivos
     uint32_t Position;  // Posição atual de leitura em bytes
     uint32_t Size;      // Tamanho do arquivo em bytes
-} FAT_File;
+} fat_file_t;
 
 /** Máscaras de atributos usadas por entradas de diretório FAT. 
  *  @param FAT_ATTRIBUTE_READ_ONLY: Atributo de somente leitura
@@ -53,7 +53,7 @@ typedef struct FAT_File {
  *  @param FAT_ATTRIBUTE_ARCHIVE: Atributo de arquivo de arquivamento
  *  @param FAT_ATTRIBUTE_LFN: Combinação usada por entradas de nome longo (LFN)
 */
-enum FAT_Attributes {
+enum fat_attributes {
     FAT_ATTRIBUTE_READ_ONLY = 0x01,     // Atributo de somente leitura
     FAT_ATTRIBUTE_HIDDEN = 0x02,        // Atributo de arquivo oculto
     FAT_ATTRIBUTE_SYSTEM = 0x04,        // Atributo de arquivo de sistema
@@ -64,45 +64,45 @@ enum FAT_Attributes {
 };
 
 /** Inicializa a FAT lendo o setor de boot, a tabela FAT e o diretório raiz.
- *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
+ *  @param disk: Um ponteiro para a estrutura disk_t representando o disco onde a FAT está localizada.
  *  @return: true se a inicialização for bem-sucedida, false caso contrário.
  */
-bool FAT_Initialize(DISK* disk);
+bool FAT_Initialize(disk_t* disk);
 
 /** Abre um arquivo ou diretório na FAT a partir de seu caminho.
- *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
+ *  @param disk: Um ponteiro para a estrutura disk_t representando o disco onde a FAT está localizada.
  *  @param path: O caminho do arquivo ou diretório a ser aberto, usando '/' como separador. Exemplo: "/DIR1/FILE.TXT".
- *  @return: Um ponteiro para a estrutura FAT_File representando o arquivo ou diretório aberto, ou NULL se não for encontrado ou ocorrer um erro.
+ *  @return: Um ponteiro para a estrutura fat_file_t representando o arquivo ou diretório aberto, ou NULL se não for encontrado ou ocorrer um erro.
  */
-FAT_File far* FAT_Open(DISK* disk, const char* path);
+fat_file_t far* FAT_Open(disk_t* disk, const char* path);
 
 /** Lê dados de um arquivo ou diretório aberto na FAT.
- *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
- *  @param file: Um ponteiro para a estrutura FAT_File representando o arquivo ou diretório aberto.
+ *  @param disk: Um ponteiro para a estrutura disk_t representando o disco onde a FAT está localizada.
+ *  @param file: Um ponteiro para a estrutura fat_file_t representando o arquivo ou diretório aberto.
  *  @param byteCount: O número de bytes a serem lidos.
  *  @param dataOut: Um ponteiro para o buffer onde os dados lidos serão armazenados.
  *  @return: O número de bytes efetivamente lidos, ou 0 se ocorrer um erro.
  */
-uint32_t FAT_Read(DISK* disk, FAT_File far* file, uint32_t byteCount, void* dataOut);
+uint32_t FAT_Read(disk_t* disk, fat_file_t far* file, uint32_t byteCount, void* dataOut);
 
 /** Lê dados de um arquivo aberto na FAT para um buffer far.
- *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
- *  @param file: Um ponteiro para a estrutura FAT_File representando o arquivo ou diretório aberto.
+ *  @param disk: Um ponteiro para a estrutura disk_t representando o disco onde a FAT está localizada.
+ *  @param file: Um ponteiro para a estrutura fat_file_t representando o arquivo ou diretório aberto.
  *  @param byteCount: O número de bytes a serem lidos.
  *  @param dataOut: Um ponteiro far para o buffer onde os dados lidos serão armazenados.
  *  @return: O número de bytes efetivamente lidos, ou 0 se ocorrer um erro.
  */
-uint32_t FAT_ReadFar(DISK* disk, FAT_File far* file, uint32_t byteCount, void far* dataOut);
+uint32_t FAT_ReadFar(disk_t* disk, fat_file_t far* file, uint32_t byteCount, void far* dataOut);
 
 /** Lê a próxima entrada de diretório de um diretório aberto na FAT.
- *  @param disk: Um ponteiro para a estrutura DISK representando o disco onde a FAT está localizada.
- *  @param file: Um ponteiro para a estrutura FAT_File representando o diretório aberto.
- *  @param dirEntry: Um ponteiro para a estrutura FAT_DirectoryEntry onde a entrada lida será armazenada.
+ *  @param disk: Um ponteiro para a estrutura disk_t representando o disco onde a FAT está localizada.
+ *  @param file: Um ponteiro para a estrutura fat_file_t representando o diretório aberto.
+ *  @param dirEntry: Um ponteiro para a estrutura fat_dir_entry_t onde a entrada lida será armazenada.
  *  @return: true se uma entrada foi lida com sucesso, false se não houver mais entradas ou ocorrer um erro.
  */
-bool FAT_ReadEntry(DISK* disk, FAT_File far* file, FAT_DirectoryEntry* dirEntry);
+bool FAT_ReadEntry(disk_t* disk, fat_file_t far* file, fat_dir_entry_t* dirEntry);
 
 /** Fecha um arquivo ou diretório aberto na FAT, liberando quaisquer recursos associados.
- *  @param file: Um ponteiro para a estrutura FAT_File representando o arquivo ou diretório a ser fechado.
+ *  @param file: Um ponteiro para a estrutura fat_file_t representando o arquivo ou diretório a ser fechado.
  */
-void FAT_Close(FAT_File far* file);
+void FAT_Close(fat_file_t far* file);

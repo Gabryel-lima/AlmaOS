@@ -3,7 +3,7 @@
 
 #define PIT_BASE_FREQ   1193182     /* cristal do 8254 em Hz */
 
-static volatile uint32_t tick_count;
+static volatile uint32_t tick_count; // Contador de ticks desde a inicialização do PIT
 
 void pit_init(uint32_t frequency) {
     if (frequency == 0) frequency = PIT_DEFAULT_FREQ;

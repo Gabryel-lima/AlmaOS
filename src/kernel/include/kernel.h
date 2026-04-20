@@ -13,23 +13,18 @@
 #include "stddef.h"
 #include "stdarg.h"
 
-/** Desabilita interrupcoes (CLI). 
- *  @note Esta funcao deve ser usada com cuidado, pois desabilitar as interrupcoes 
- *  por muito tempo pode causar perda de eventos importantes. Use cli() apenas 
- *  quando necessario e reabilite as interrupcoes o mais rapido possivel com sti().
-*/
+/** @brief Desabilita interrupcoes (CLI).
+ *  @note Usar com cuidado; reabilitar com sti() o mais rapido possivel para nao perder eventos.
+ */
 static inline void cli(void) { __asm__ volatile("cli"); }
 
-/** Habilita interrupcoes (STI). 
- *  @note Esta funcao deve ser chamada apenas depois que o kernel tiver configurado 
- *  um stack seguro para o processador usar durante as interrupcoes, 
- *  e somente depois de ter desabilitado as interrupcoes com cli().
-*/
+/** @brief Habilita interrupcoes (STI).
+ *  @note Chamar apenas depois que o stack e os handlers estiverem configurados.
+ */
 static inline void sti(void) { __asm__ volatile("sti"); }
 
-/** Coloca a CPU em halt ate a proxima interrupcao. 
- *  @note Esta funcao deve ser usada apenas quando o kernel tiver configurado um handler 
- *  de interrupcao adequado para lidar com a interrupcao que pode ocorrer. 
- *  Caso contrario, a CPU pode ficar travada.
-*/
+/** @brief Coloca a CPU em halt ate a proxima interrupcao.
+ *  @note Requer que o handler correspondente esteja registrado na IDT; caso contrario,
+ *  a CPU ficara travada indefinidamente.
+ */
 static inline void halt(void) { __asm__ volatile("hlt"); }

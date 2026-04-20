@@ -3,12 +3,12 @@
 #include "include/string.h"
 
 /* VGA text mode CRT controller ports */
-#define VGA_CTRL_REG    0x3D4
-#define VGA_DATA_REG    0x3D5
+#define VGA_CTRL_REG    0x3D4   // Registro de controle do CRT (indexador)
+#define VGA_DATA_REG    0x3D5   // Registro de dados do CRT (para leitura/escrita dos registradores indexados)
 
-static int vga_col;
-static int vga_row;
-static uint8_t vga_attr;
+static int vga_col; // Coluna atual do cursor (0-79)
+static int vga_row; // Linha atual do cursor (0-24)
+static uint8_t vga_attr; // Atributos de cor do texto (4 bits para cor de fundo, 4 bits para cor de primeiro plano)
 
 static inline uint16_t vga_entry(char c, uint8_t attr) {
     return (uint16_t)c | ((uint16_t)attr << 8);

@@ -15,24 +15,7 @@
 #define VGA_HEIGHT 25       /* Número de linhas no modo texto do VGA */
 #define VGA_ADDR   ((volatile uint16_t *)0xB8000)       /* Endereço base da memória do VGA text mode */
 
-/** Cores padrao do VGA text mode. 
- *  @param VGA_COLOR_BLACK: Preto
- *  @param VGA_COLOR_BLUE: Azul
- *  @param VGA_COLOR_GREEN: Verde
- *  @param VGA_COLOR_CYAN: Ciano
- *  @param VGA_COLOR_RED: Vermelho
- *  @param VGA_COLOR_MAGENTA: Magenta
- *  @param VGA_COLOR_BROWN: Marrom
- *  @param VGA_COLOR_LIGHT_GREY: Cinza claro
- *  @param VGA_COLOR_DARK_GREY: Cinza escuro
- *  @param VGA_COLOR_LIGHT_BLUE: Azul claro
- *  @param VGA_COLOR_LIGHT_GREEN: Verde claro
- *  @param VGA_COLOR_LIGHT_CYAN: Ciano claro
- *  @param VGA_COLOR_LIGHT_RED: Vermelho claro
- *  @param VGA_COLOR_LIGHT_MAGENTA: Magenta claro
- *  @param VGA_COLOR_YELLOW: Amarelo
- *  @param VGA_COLOR_WHITE: Branco
-*/
+/** @brief Cores padrao do VGA text mode (4-bit, foreground e background). */
 enum vga_color {
     VGA_COLOR_BLACK         = 0,    // Preto
     VGA_COLOR_BLUE          = 1,    // Azul
@@ -52,60 +35,52 @@ enum vga_color {
     VGA_COLOR_WHITE         = 15,   // Branco
 };
 
-/** Inicializa o driver VGA text mode (limpa a tela). 
- *  Esta função deve ser chamada durante a inicialização do kernel 
- *  para configurar o VGA antes de usá-lo para saída de texto.
-*/
+/** @brief Inicializa o driver VGA text mode (limpa a tela). */
 void vga_init(void);
 
-/** Limpa a tela com a cor atual. 
- *  Esta função preenche toda a tela com espaços usando 
- *  a cor atual, e move o cursor para a posição (0, 0).
-*/
+/** @brief Limpa a tela com a cor atual e move o cursor para (0, 0). */
 void vga_clear(void);
 
-/** Define a cor atual (foreground + background). 
- *  @param fg: Cor do texto (foreground), usando os valores do enum vga_color.
- *  @param bg: Cor de fundo (background), usando os valores do enum vga_color.
-*/
+/** @brief Define a cor atual (foreground + background).
+ *  @param fg Cor do texto (foreground), usando enum vga_color.
+ *  @param bg Cor de fundo (background), usando enum vga_color.
+ */
 void vga_set_color(uint8_t fg, uint8_t bg);
 
-/** Imprime um caractere na posicao atual e avanca o cursor. 
- *  @param c: Caractere a ser impresso. Caracteres de controle 
- *  como '\n' e '\r' devem ser tratados adequadamente (ex: nova linha, retorno de carro).
-*/
+/** @brief Imprime um caractere na posicao atual e avanca o cursor.
+ *  @param c Caractere a imprimir; '\n' e '\r' sao tratados como controle.
+ */
 void vga_putchar(char c);
 
-/** Imprime uma string terminada em nulo. 
- *  @param s: Ponteiro para a string a ser impressa. 
- *  A string deve ser terminada com um caractere nulo ('\0').
-*/
+/** @brief Imprime uma string terminada em nulo.
+ *  @param s Ponteiro para a string (terminada em '\0').
+ */
 void vga_puts(const char *s);
 
-/** Printf basico para o kernel (suporta %c, %s, %d, %u, %x, %p, %%). 
- *  @param fmt: String de formato (similar a printf) para a mensagem a ser impressa.
- *  @param ...: Argumentos adicionais para a string de formato.
-*/
-void vga_printf(const char *fmt, ...);
-
-/** Variante com va_list para uso interno (klog, panic). 
- *  @param fmt: String de formato (similar a printf) para a mensagem a ser impressa.
- *  @param args: Lista de argumentos variadicos, já processada por va_start
-*/
-void vga_vprintf(const char *fmt, va_list args);
-
-/** Move o cursor de hardware para a posicao (col, row). 
- *  @param col: Coluna para mover o cursor (0 a VGA_WIDTH-1).
- *  @param row: Linha para mover o cursor (0 a VGA_HEIGHT-1).
-*/
-void vga_set_cursor(int col, int row);
-
-/** Retorna a coluna atual do cursor. 
- *  @return A coluna atual do cursor (0 a VGA_WIDTH-1).
-*/
+/** @brief Retorna a coluna atual do cursor (0-based).
+ *  @return Coluna atual (0 = inicio da linha).
+ */
 int vga_get_col(void);
 
-/** Retorna a linha atual do cursor. 
- *  @return A linha atual do cursor (0 a VGA_HEIGHT-1).
-*/
+/** @brief Printf basico para o kernel (suporta %c, %s, %d, %u, %x, %p, %%).
+ *  @param fmt String de formato.
+ *  @param ... Argumentos adicionais para o formato.
+ */
+void vga_printf(const char *fmt, ...);
+
+/** @brief Variante com va_list para uso interno (klog, panic).
+ *  @param fmt String de formato.
+ *  @param args Lista de argumentos variadicos, ja processada por va_start.
+ */
+void vga_vprintf(const char *fmt, va_list args);
+
+/** @brief Move o cursor de hardware para a posicao (col, row).
+ *  @param col Coluna destino (0 a VGA_WIDTH-1).
+ *  @param row Linha destino (0 a VGA_HEIGHT-1).
+ */
+void vga_set_cursor(int col, int row);
+
+/** @brief Retorna a linha atual do cursor.
+ *  @return Linha atual (0 a VGA_HEIGHT-1).
+ */
 int vga_get_row(void);

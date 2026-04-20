@@ -38,7 +38,7 @@ int memcmp(const void far* ptr1, const void far* ptr2, uint16_t num) {
     return 0;
 }
 
-void MEMORY_Map_Init(MEMORY_Map* map, MEMORY_E820Entry far* entries, uint16_t capacity) {
+void MEMORY_Map_Init(memory_map_t* map, memory_e820_entry_t far* entries, uint16_t capacity) {
     if (map == 0)
         return;
 
@@ -47,16 +47,16 @@ void MEMORY_Map_Init(MEMORY_Map* map, MEMORY_E820Entry far* entries, uint16_t ca
     map->Capacity = capacity;
 
     if (entries != 0)
-        memset(entries, 0, (uint16_t)(capacity * (uint16_t)sizeof(MEMORY_E820Entry)));
+        memset(entries, 0, (uint16_t)(capacity * (uint16_t)sizeof(memory_e820_entry_t)));
 }
 
-bool MEMORY_Map_Collect(MEMORY_Map* map) {
+bool MEMORY_Map_Collect(memory_map_t* map) {
     uint16_t entryCount = 0;
 
     if (map == 0 || map->Entries == 0 || map->Capacity == 0)
         return false;
 
-    memset(map->Entries, 0, (uint16_t)(map->Capacity * (uint16_t)sizeof(MEMORY_E820Entry)));
+    memset(map->Entries, 0, (uint16_t)(map->Capacity * (uint16_t)sizeof(memory_e820_entry_t)));
 
     if (!x86_Memory_GetMap(map->Entries, map->Capacity, &entryCount))
         return false;
@@ -65,7 +65,7 @@ bool MEMORY_Map_Collect(MEMORY_Map* map) {
     return true;
 }
 
-void MEMORY_Allocator_Init(MEMORY_Allocator* allocator, uint32_t basePhysical, uint32_t capacity) {
+void MEMORY_Allocator_Init(memory_allocator_t* allocator, uint32_t basePhysical, uint32_t capacity) {
     if (allocator == 0)
         return;
 
@@ -74,8 +74,8 @@ void MEMORY_Allocator_Init(MEMORY_Allocator* allocator, uint32_t basePhysical, u
     allocator->Offset = 0;
 }
 
-bool MEMORY_Allocator_InitFromMap(MEMORY_Allocator* allocator,
-                                  const MEMORY_Map* map,
+bool MEMORY_Allocator_InitFromMap(memory_allocator_t* allocator,
+                                  const memory_map_t* map,
                                   uint32_t basePhysical,
                                   uint32_t desiredSize) {
     uint32_t regionEnd = basePhysical + desiredSize;
@@ -84,7 +84,7 @@ bool MEMORY_Allocator_InitFromMap(MEMORY_Allocator* allocator,
         return false;
 
     for (uint16_t i = 0; i < map->EntryCount; i++) {
-        const MEMORY_E820Entry far* entry = map->Entries + i;
+        const memory_e820_entry_t far* entry = map->Entries + i;
         uint64_t entryBase = entry->BaseAddress;
         uint64_t entryEnd = entry->BaseAddress + entry->Length;
 
@@ -104,7 +104,7 @@ bool MEMORY_Allocator_InitFromMap(MEMORY_Allocator* allocator,
     return false;
 }
 
-void far* MEMORY_Allocator_Alloc(MEMORY_Allocator* allocator, uint32_t size, uint16_t alignment) {
+void far* MEMORY_Allocator_Alloc(memory_allocator_t* allocator, uint32_t size, uint16_t alignment) {
     uint32_t alignedOffset;
     uint32_t remainder;
 
@@ -129,11 +129,11 @@ void far* MEMORY_Allocator_Alloc(MEMORY_Allocator* allocator, uint32_t size, uin
     return MEMORY_PhysicalToFar(allocator->BasePhysical + alignedOffset);
 }
 
-void MEMORY_BootInfo_Init(MEMORY_BootInfo far* bootInfo,
+void MEMORY_BootInfo_Init(memory_boot_info_t far* bootInfo,
                           uint8_t bootDrive,
                           uint8_t videoMode,
-                          const MEMORY_Map* map,
-                          const MEMORY_Allocator* allocator,
+                          const memory_map_t* map,
+                          const memory_allocator_t* allocator,
                           void far* ioBuffer,
                           uint32_t ioBufferSize,
                           void far* framebuffer,

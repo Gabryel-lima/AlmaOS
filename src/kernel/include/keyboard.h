@@ -20,39 +20,44 @@
 
 #define KB_BUFFER_SIZE  128     // Tamanho do buffer circular de caracteres lidos do teclado.
 
-/** Inicializa o driver de teclado (habilita IRQ 1). 
- *  @note Esta funcao deve ser chamada durante a inicializacao do kernel 
- *  para configurar o handler de interrupcao do teclado e preparar 
- *  o buffer circular para uso.
-*/
+/** @brief Layouts de teclado suportados. */
+typedef enum kb_layout_t {
+    KB_LAYOUT_US    = 0,    /**< US QWERTY (padrão norte-americano). */
+    KB_LAYOUT_ABNT2 = 1,    /**< Brasileiro ABNT2 (padrão). */
+} kb_layout_t;
+
+/** @brief Inicializa o driver de teclado (habilita IRQ 1).
+ *  @note Configura o handler de interrupcao e prepara o buffer circular.
+ */
 void keyboard_init(void);
 
-/** Handler chamado pelo dispatcher de interrupcoes (IRQ 1). 
- *  @note Esta funcao deve ser registrada como handler para o vetor 
- *  de interrupcao correspondente ao teclado (IRQ 1) na IDT.
- *  Ela le os scancodes da porta de dados, converte-os 
- *  em caracteres ASCII usando uma tabela de 
- *  mapeamento, e os armazena no buffer circular.
-*/
+/** @brief Handler do teclado chamado pelo dispatcher de interrupcoes (IRQ 1).
+ *  @note Le o scancode da porta 0x60, converte para ASCII e armazena no buffer circular.
+ */
 void keyboard_handler(void);
 
-/** Le um caractere do buffer (nao-bloqueante).
- *  @note Esta funcao retorna imediatamente, mesmo que o buffer esteja vazio.
- *  @return O caractere lido, ou 0 se o buffer estiver vazio.
+/** @brief Le um caractere do buffer (nao-bloqueante).
+ *  @return Caractere lido, ou 0 se o buffer estiver vazio.
  */
 char keyboard_read(void);
 
-/** Le um caractere do buffer (bloqueante, aguarda com hlt). 
- *  @note Esta funcao bloqueia a CPU usando hlt até que haja pelo menos um caractere no buffer,
- *  garantindo que o kernel não desperdice ciclos de CPU em polling.
- *  @return O caractere lido do buffer.
-*/
+/** @brief Le um caractere do buffer (bloqueante; suspende a CPU com hlt ate ter dado).
+ *  @return Caractere lido do buffer.
+ */
 char keyboard_getchar(void);
 
-/** Retorna true se existe pelo menos um caractere no buffer. 
- *  @note Esta funcao pode ser usada para verificar se ha dados 
- *  disponiveis antes de chamar keyboard_getchar(),
- *  evitando bloqueios desnecessarios.
- *  @return true se o buffer tiver pelo menos um caractere, false caso contrario.
-*/
+/** @brief Verifica se existe pelo menos um caractere no buffer.
+ *  @return true se houver dado disponivel, false se o buffer estiver vazio.
+ */
 bool keyboard_has_data(void);
+
+/** @brief Define o layout ativo do teclado.
+ *  @param layout KB_LAYOUT_US ou KB_LAYOUT_ABNT2.
+ *  @note Pode ser chamada em qualquer momento apos keyboard_init().
+ */
+void keyboard_set_layout(kb_layout_t layout);
+
+/** @brief Retorna o layout atualmente ativo.
+ *  @return KB_LAYOUT_US ou KB_LAYOUT_ABNT2.
+ */
+kb_layout_t keyboard_get_layout(void);

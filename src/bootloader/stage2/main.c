@@ -15,12 +15,12 @@ static void boot_fail(const char* message) {
 }
 
 void _cdecl cstart(uint16_t bootDrive) {
-    DISK disk;
-    FAT_File far* kernel;
-    MEMORY_Map memoryMap;
-    MEMORY_Allocator kernelAllocator;
-    MEMORY_BootInfo far* bootInfo = (MEMORY_BootInfo far*)MEMORY_BOOT_INFO_ADDR;
-    MEMORY_E820Entry far* memoryEntries = (MEMORY_E820Entry far*)MEMORY_E820_MAP_ADDR;
+    disk_t disk;
+    fat_file_t far* kernel;
+    memory_map_t memoryMap;
+    memory_allocator_t kernelAllocator;
+    memory_boot_info_t far* bootInfo = (memory_boot_info_t far*)MEMORY_BOOT_INFO_ADDR;
+    memory_e820_entry_t far* memoryEntries = (memory_e820_entry_t far*)MEMORY_E820_MAP_ADDR;
 
     if (!DISK_Initialize(&disk, bootDrive))
         boot_fail("Disk init error");

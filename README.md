@@ -268,6 +268,7 @@ make debug
 - `src/bootloader/`: Código do setor de boot (stage1 em Assembly, stage2 em C/Assembly com Watcom 16-bit).
 - `src/kernel/`: Código principal do kernel (C/Assembly com GCC 32-bit, modo protegido).
   - `src/kernel/root/`: Comandos do shell com assinatura portável `int fn(int argc, char **argv)`. Cada arquivo é compilado como objeto independente e registrado na tabela de dispatch do shell.
+  - `src/kernel/tests/`: Utilitários de teste compilados no host: primitivas genéricas (`generic.h`, `generic_inst.h`) e validação de scancodes de teclado (`test_keyboard.c`).
 - `src/gfx/`: Biblioteca gráfica auxiliar (CPU rasterizer e GPU via OpenGL/X11).
 - `build/`: Arquivos binários gerados e imagem final.
 - `.vscode/`: Configurações do VS Code (IntelliSense, tasks, launch).
@@ -282,13 +283,86 @@ O shell usa uma tabela de dispatch (`cmd_table[]`) em vez de uma cadeia `if/else
 - `help`, `clear`, `mem`, `ticks`, `reboot`
 
 **Comandos externos** (compilados em `root/`, declarados via header próprio):
-- `echo` — `root/echo.c` / `root/echo.h`
+- `echo` — `root/echo.c` / `root/echo.h`; aceita `-n`/`--no-newline` (suprime quebra de linha) e `-h`/`--help`.
 
 Para adicionar um novo comando:
 1. Crie `src/kernel/root/meu_cmd.c` com `int meu_cmd(int argc, char **argv)`.
 2. Crie `src/kernel/root/meu_cmd.h` com a declaração.
 3. Adicione `root/meu_cmd.c` em `C_SOURCES` no `src/kernel/Makefile`.
 4. Inclua o header em `shell.c` e adicione a entrada na `cmd_table[]`.
+
+### Driver de teclado
+
+O driver PS/2 (`keyboard.c`) suporta dois layouts e três camadas de entrada:
+
+| Layout | Constante |
+|---|---|
+| US QWERTY | `KB_LAYOUT_US` |
+| Brasileiro ABNT2 | `KB_LAYOUT_ABNT2` (padrão) |
+
+Camadas de mapeamento por layout:
+- **Normal** — tecla pressionada sem modificador.
+- **Shift** — com Left Shift ou Right Shift pressionado.
+- **AltGr** — com Right Alt pressionado.
+
+Modificadores rastreados:
+- `Shift` (Left/Right) — ativo enquanto pressionado.
+- `Caps Lock` — toggle; inverte caixa apenas para letras (a–z / A–Z).
+- `AltGr` (Right Alt) — ativo enquanto pressionado.
+- Prefixo `0xE0` — rastreado para distinguir Right Alt de Left Alt.
+
+Para trocar o layout em tempo de execução:
+
+```c
+keyboard_set_layout(KB_LAYOUT_US);    // US QWERTY
+keyboard_set_layout(KB_LAYOUT_ABNT2); // Brasileiro (padrão)
+kb_layout_t atual = keyboard_get_layout();
+```
+
+> **Nota:** Dead keys do ABNT2 (´ acento agudo, ~ til) são mapeados diretamente ao caractere base; combinação de acento não é suportada. Os caracteres ç/Ç usam encoding ISO-8859-1 (0xE7/0xC7), compatível com a tabela de glifos CP850 do VGA.
+
+### Parser de opções (`getopt`)
+
+O módulo `getopt.c` / `include/getopt.h` implementa análise de opções compatível com POSIX para os builtins do shell:
+
+- `getopt()` — opções curtas (`-n`, `-v`, etc.).
+- `getopt_long()` — opções longas no estilo GNU (`--no-newline`, `--help=valor`, etc.).
+
+```c
+#include "include/getopt.h"
+
+int meu_cmd(int argc, char **argv) {
+    int opt;
+    optind = 1; /* reinicializar antes de cada parse */
+    while ((opt = getopt(argc, argv, "hn:")) != -1) {
+        switch (opt) {
+        case 'h': /* exibe ajuda */  break;
+        case 'n': /* usa optarg */   break;
+        }
+    }
+    return 0;
+}
+```
+
+> Reinicialize `optind = 1` antes de cada novo `argv[]`.
+
+### Primitivas genéricas (`tests/generic`)
+
+Os arquivos `src/kernel/tests/generic.h` e `generic_inst.h` fornecem funções type-safe geradas por macro:
+
+| Operação | Descrição |
+|---|---|
+| `min(a, b)` | menor entre dois valores |
+| `max(a, b)` | maior entre dois valores |
+| `clamp(v, lo, hi)` | limita `v` ao intervalo `[lo, hi]` |
+| `swap(a, b)` | troca os valores de `a` e `b` |
+| `array_fill(arr, n, val)` | preenche array com `val` |
+| `array_sum(arr, n)` | soma todos os elementos |
+| `array_find(arr, n, val)` | índice da primeira ocorrência ou -1 |
+
+Tipos suportados: `uint8_t`…`uint64_t`, `int8_t`…`int64_t`, `float32_t`, `float64_t`, `long_double`, `uptr`, `isize`, `usize`.
+
+Inclua `generic_inst.h` apenas em arquivos `.c` (nunca em headers públicos). Consulte [src/kernel/tests/Generics.md](src/kernel/tests/Generics.md) para detalhes e exemplos.
 
 ---
 Desenvolvido para fins educacionais.
