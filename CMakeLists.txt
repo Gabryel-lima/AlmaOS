@@ -33,8 +33,8 @@ add_almaos_make_target(tests tests)
 
 enable_testing()
 
-add_test(NAME generic_includes
-    COMMAND ${MAKE_EXECUTABLE} -C ${ALMAOS_SOURCE_DIR} BUILD_DIR=${ALMAOS_BUILD_DIR} test-includes
+add_test(NAME kernel_tests
+    COMMAND ${MAKE_EXECUTABLE} -C ${ALMAOS_SOURCE_DIR} BUILD_DIR=${ALMAOS_BUILD_DIR} kernel-tests
     WORKING_DIRECTORY ${ALMAOS_SOURCE_DIR})
 
 add_test(NAME floppy_image_contents

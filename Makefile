@@ -20,6 +20,10 @@ FAT_BIN := $(BUILD_DIR)/fat
 TEST_SRC := src/kernel/include/generic_test.c
 TEST_BIN := $(BUILD_DIR)/generic_test
 
+# Host-side kernel test binary
+KERNEL_TEST_KEYBOARD_SRC := src/kernel/tests/test_keyboard.c
+KERNEL_TEST_KEYBOARD_BIN := $(BUILD_DIR)/kernel_test_keyboard
+
 # Configurações do subprojeto
 STAGE1_DIR=$(SRC_DIR)/bootloader/stage1
 STAGE2_DIR=$(SRC_DIR)/bootloader/stage2
@@ -32,7 +36,7 @@ GFX_DIR=$(SRC_DIR)/gfx
 ABS_BUILD_DIR=$(shell pwd)/$(BUILD_DIR)
 
 # Declare phony targets to avoid conflitos com arquivos de mesmo nome
-.PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2 gfx
+.PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2 gfx kernel-tests
 
 #
 # Default target: build a floppy FAT12 image containing bootloader + kernel payload
@@ -91,6 +95,14 @@ test-includes: $(BUILD_DIR) $(TEST_BIN)
 $(TEST_BIN): $(TEST_SRC) | $(BUILD_DIR)
 	gcc -std=c11 -O2 -Wall $(TEST_SRC) -o $(TEST_BIN)
 
+# Compile and run host-side kernel tests located in src/kernel/tests
+kernel-tests: $(BUILD_DIR) $(KERNEL_TEST_KEYBOARD_BIN)
+	@echo "Running kernel tests..."
+	./$(KERNEL_TEST_KEYBOARD_BIN)
+
+$(KERNEL_TEST_KEYBOARD_BIN): $(KERNEL_TEST_KEYBOARD_SRC) | $(BUILD_DIR)
+	gcc -std=c11 -O2 -Wall -Wextra $(KERNEL_TEST_KEYBOARD_SRC) -o $(KERNEL_TEST_KEYBOARD_BIN)
+
 # run in Bochs
 debug: $(FLOPPY)
 	bochs -f bochs_config
@@ -111,6 +123,7 @@ help:
 	@echo "  make bootloader - build the bootloader binary"
 	@echo "  make fat      - build the FAT utility"
 	@echo "  make run      - run the floppy image in QEMU"
+	@echo "  make kernel-tests - compile and run host-side kernel tests"
 	@echo "  make test-includes - compile and run the generic test"
 	@echo "  make debug    - run the floppy image in Bochs"
 	@echo "  make clean    - clean the build directory"
