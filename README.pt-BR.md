@@ -368,4 +368,4 @@ Inclua `generic_inst.h` apenas em arquivos `.c` (nunca em headers públicos). Co
 Desenvolvido para fins educacionais.
 
 # Licença
-Este projeto está licenciado sob a Licença MIT. Veja o arquivo [LICENSE](./LICENSE) para mais detalhes.
+Este projeto está licenciado sob a Licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
