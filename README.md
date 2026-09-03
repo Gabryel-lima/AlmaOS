@@ -187,7 +187,7 @@ make debug
 - `src/kernel/`: Kernel sources (C/assembly, GCC 32-bit protected mode).
   - `src/kernel/root/`: Shell commands with portable signature `int fn(int argc, char **argv)`.
   - `src/kernel/tests/`: Host-side test utilities.
-- `src/gfx/`: Graphics helpers and examples (rasterizer, GPU helpers).
+- Graphics: not vendored yet. [gfx](https://github.com/Gabryel-lima/gfx) is a separate library (portable software rasterizer/framebuffer core, optional Linux/X11/OpenGL backend) meant to be integrated as a kernel module later — see `TODO.md` section 5.
 - `build/`: Generated binaries and final floppy image.
 - `.vscode/`: VS Code configuration files.
 - `Makefile`: Build automation.

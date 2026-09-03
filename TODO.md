@@ -10,8 +10,8 @@ O foco e manter o boot, o kernel e a camada grafica com contratos claros.
   remapeia o PIC para `0x20-0x2F`, programa o PIT a ~100 Hz e habilita teclado via IRQ1.
 - A saida usa memoria VGA text mode direta (`0xB8000`, 80x25) com printf basico.
 - Um shell interativo aceita comandos: `help`, `clear`, `mem`, `ticks`, `reboot`.
-- A biblioteca `gfx` foi clonada em [src/gfx](src/gfx) e possui backends CPU/GPU (Linux)
-  e um novo backend bare-metal em [src/gfx/os/](src/gfx/os/) com API 2D e VGA.
+- A camada grafica ainda nao foi integrada: `gfx` (github.com/Gabryel-lima/gfx) e um
+  repositorio externo, ainda nao vendorizado aqui. Ver secao 5.
 - O stage2 continua em modo real 16-bit com OpenWatcom, cobrindo FAT12, disco e mapa E820.
 - O demo de protected mode em [protected/src/main.asm](protected/src/main.asm) continua separado.
 - O shell usa tabela de dispatch com tokenizador de argc/argv; comandos portaveis vivem em `src/kernel/root/`.
@@ -59,53 +59,67 @@ O foco e manter o boot, o kernel e a camada grafica com contratos claros.
 
 ## 5. API grafica
 
-A `gfx` foi clonada para `src/gfx/` e organizada como biblioteca local em C.
+**Estado real (corrigido):** `gfx` (github.com/Gabryel-lima/gfx) e um repositorio
+separado, ainda **nao vendorizado** dentro do AlmaOS — nao existe `src/gfx/` neste
+repo nem nunca existiu (sem historico de commit). Uma versao anterior deste TODO
+descrevia um backend bare-metal (`gfx2d`, `vga_backend`) como se ja estivesse
+pronto; isso nunca foi implementado. Esta secao documenta o estado real e o
+gancho de integracao que ja existe hoje, para nao repetir o mesmo erro.
 
-### Estrutura no repo
+### O que ja existe hoje, do lado do AlmaOS
 
-- `src/gfx/include/` — API publica (`gfx.h`, `gfx_math.h`).
-- `src/gfx/cpu/` — Backend CPU com framebuffer e rasterizador.
-- `src/gfx/gpu/` — Backend GPU/OpenGL (Linux/X11).
-- `src/gfx/os/` — Backend bare-metal para AlmaOS:
-  - `gfx2d.h` / `gfx2d.c` — API 2D: `gfx2d_init`, `gfx2d_clear`, `gfx2d_put_pixel`,
-    `gfx2d_fill_rect`, `gfx2d_draw_line`, `gfx2d_blit`, `gfx2d_draw_text`, `gfx2d_present`.
-  - `vga_backend.h` / `vga_backend.c` — Acesso direto a VGA mode 13h e paleta DAC.
-- `src/gfx/src/` — Codigo compartilhado (math, stubs, tinyobj).
-- `src/gfx/tests/` — Testes e programas de validacao.
+O contrato de handoff bootloader → kernel ja reserva espaco para um framebuffer,
+mesmo sem nenhum backend grafico ligado nele:
 
-### O que ja existe
+- `src/bootloader/stage2/memdefs.h` reserva `0xA0000`–`0xBFFFF` para
+  framebuffer/VGA (`MEMORY_FRAMEBUFFER_ADDR`, `MEMORY_FRAMEBUFFER_SIZE`).
+- `src/bootloader/stage2/memory.h` / `memory.c` ja aceitam `framebuffer`,
+  `framebufferWidth/Height/Pitch/Bpp/Flags` em `MEMORY_BootInfo_Init()`.
+- `src/kernel/include/boot_info.h` espelha os mesmos campos em
+  `boot_info_raw_t`, no endereco fixo `BOOT_INFO_ADDR = 0x60000`.
+- **Porem**, a chamada real em `src/bootloader/stage2/main.c` passa todos os
+  seis argumentos de framebuffer como `0` e `MEMORY_VIDEO_MODE_TEXT` — nenhuma
+  chamada VBE/VESA existe ainda em lugar nenhum do stage2.
 
-- [x] API 2D definida em `gfx2d.h` com contexto explicito.
-- [x] Primitivas: pixel, retangulo, linha (Bresenham), blit, texto com fonte 8x8.
-- [x] Double buffering via backbuffer.
-- [x] Backend VGA com acesso direto ao framebuffer 0xA0000 e paleta DAC.
-- [x] Fonte bitmap 8x8 embutida (ASCII 32-126, 95 glifos).
+Ou seja: o contrato de dados existe e esta bem desenhado; falta so alguem
+preenche-lo (ativar um modo de video) e alguem le-lo do lado do kernel.
 
-### O que falta
+### Do lado do `gfx` (repositorio externo)
 
-- [ ] Implementar trampolim de modo real para BIOS `int 10h` (trocar modo de video).
-- [ ] Ativar VGA mode 13h (320x200, 256 cores) a partir do kernel.
-- [ ] Integrar `gfx2d` no kernel principal como modulo opcional.
-- [ ] Implementar clipping robusto para todas as primitivas.
-- [ ] Adicionar suporte a VBE/VESA para resolucoes maiores.
-- [ ] Criar carregador de sprites e bitmaps a partir de arquivos no disco.
-- [ ] Testar e validar o rasterizador de triangulos do backend CPU.
+O `gfx` foi redesenhado para separar um nucleo portatil (`include/` + `core/`,
+sem dependencia de SO alem da libc padrao: matematica, rasterizador por
+software, framebuffer generico `pixels/width/height/pitch`) de extras
+especificos de Linux (`platform/linux/`: `/dev/fb0`, janela X11/OpenGL). O
+nucleo (`gfx_math.c` + `gfx_raster.c` + `gfx_framebuffer.c`) ja e validado no
+proprio `gfx` com um alvo de CMake (`GFX_CORE_FREESTANDING_CHECK`) que compila
+essas tres fontes com `-ffreestanding`, exatamente para provar que dao para
+embutir num kernel. Isso ainda **nao foi portado para dentro do AlmaOS** — e
+so a base que torna essa integracao factivel sem reescrever um rasterizador do zero.
 
-### Contrato minimo
+### O que falta para uma integracao real
+
+- [ ] Implementar trampolim de modo real para BIOS `int 10h` (o kernel ja esta
+      em modo protegido 32-bit e nao pode chamar a BIOS diretamente).
+- [ ] Ativar um modo de video no stage2 — mais simples primeiro: VGA mode 13h
+      (320x200, 256 cores, endereco fixo `0xA0000`, sem VBE); depois VBE/VESA
+      para resolucoes maiores (o `boot_info` ja tem `fb_pitch`/`fb_bpp` para isso).
+- [ ] Preencher de verdade os argumentos de framebuffer em
+      `MEMORY_BootInfo_Init()` (hoje todos zero) em vez de so reservar o espaco.
+- [ ] Copiar `include/` + `core/` do `gfx` para dentro do AlmaOS (ex.:
+      `third_party/gfx/`) e compilar com o toolchain `-m32 -ffreestanding` do kernel.
+- [ ] Escrever a ponte kernel-especifica: ler `boot_info()->framebuffer_far`
+      via `far_to_flat()`, montar um `Framebuffer` do `gfx` (gfx_raster.h) em
+      cima dele, e expor isso como um modulo opcional do kernel.
+- [ ] So depois disso faz sentido pensar em sprites, fontes, blit — tudo isso
+      ja existe no `gfx` como conceito (rasterizador + framebuffer), o trabalho
+      aqui e so a ponte, nao reescrever a parte grafica.
+
+### Contrato minimo (mantido)
 
 O kernel nao chama rotinas de video dispersas. Toda saida visual passa por:
-- `vga.c` para modo texto (shell, panic, log).
-- `gfx2d` para modo grafico (quando ativado).
-
-### Ordem de implementacao recomendada
-
-1. ~~Definir API publica minima.~~ ✓
-2. ~~Implementar backend VGA text mode.~~ ✓
-3. ~~Criar primitivas de pixel, retangulo, linha.~~ ✓
-4. ~~Adicionar texto com fonte bitmap 8x8.~~ ✓
-5. Implementar trampolim real-mode e ativar mode 13h.
-6. Integrar blit, sprites e carregamento de recursos.
-7. Sair do modo de teste para integrar ao kernel principal.
+- `vga.c` para modo texto (shell, panic, log) — ja funciona hoje.
+- Um modulo grafico opcional (a integrar) para modo grafico, construido sobre
+  o nucleo do `gfx`, quando ativado.
 
 ## 6. Recursos graficos
 
@@ -147,6 +161,6 @@ O projeto passa de fase quando existir:
 - [x] Boot previsivel (stage1 → stage2 → kernel em modo protegido).
 - [x] Kernel carregado de forma consistente com IDT, PIC e PIT.
 - [x] Memoria base e interrupcoes sob controle.
-- [x] API grafica escolhida e isolada (gfx2d no repo, backend VGA definido).
+- [ ] API grafica escolhida e isolada (gfx externo definido; integracao no kernel ainda por fazer — ver secao 5).
 - [ ] Recursos carregados por uma rota unica (disco no kernel).
 - [x] Fluxo de depuracao que nao dependa de suposicao (panic, assert, klog, shell).

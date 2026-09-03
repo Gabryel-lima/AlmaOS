@@ -269,7 +269,7 @@ make debug
 - `src/kernel/`: Código principal do kernel (C/Assembly com GCC 32-bit, modo protegido).
   - `src/kernel/root/`: Comandos do shell com assinatura portável `int fn(int argc, char **argv)`. Cada arquivo é compilado como objeto independente e registrado na tabela de dispatch do shell.
   - `src/kernel/tests/`: Utilitários de teste compilados no host: primitivas genéricas (`generic.h`, `generic_inst.h`) e validação de scancodes de teclado (`test_keyboard.c`).
-- `src/gfx/`: Biblioteca gráfica auxiliar (CPU rasterizer e GPU via OpenGL/X11).
+- Gráficos: ainda não integrado ao repositório. [gfx](https://github.com/Gabryel-lima/gfx) é uma biblioteca separada (núcleo portátil de rasterização/framebuffer por software, com backend Linux/X11/OpenGL opcional) pensada para virar um módulo do kernel futuramente — veja a seção 5 do `TODO.md`.
 - `build/`: Arquivos binários gerados e imagem final.
 - `.vscode/`: Configurações do VS Code (IntelliSense, tasks, launch).
 - `Makefile`: Script de automação do build.
