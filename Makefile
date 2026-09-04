@@ -33,7 +33,12 @@ GFX_DIR=$(SRC_DIR)/gfx
 
 # Arquivos de saída
 # Note que passamos o caminho absoluto para o sub-make para que ele saiba onde salvar
-ABS_BUILD_DIR=$(shell pwd)/$(BUILD_DIR)
+# O GNU Make separa targets/prerequisitos por espaço, então um caminho de projeto
+# com espaços (ex.: "Área de trabalho") quebraria as regras dos sub-Makefiles.
+# Para evitar isso, usamos um symlink em /tmp sem espaços e apontamos os
+# sub-makes para ele em vez do caminho absoluto real.
+BUILD_LINK=/tmp/almaos-build-$(shell whoami)
+ABS_BUILD_DIR=$(BUILD_LINK)
 
 # Declare phony targets to avoid conflitos com arquivos de mesmo nome
 .PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2 gfx kernel-tests
@@ -48,21 +53,26 @@ all: $(FLOPPY) fat
 $(BUILD_DIR):
 	mkdir -p $@
 
+# Cria/atualiza o symlink sem espaços que aponta para o build dir real,
+# usado como BUILD_DIR pelos sub-makes (veja comentário acima de ABS_BUILD_DIR)
+$(BUILD_LINK): $(BUILD_DIR)
+	ln -sfn "$(shell pwd)/$(BUILD_DIR)" $(BUILD_LINK)
+
 # Regra para compilar o stage1 no sub-diretório
-stage1: $(BUILD_DIR)
-	$(MAKE) -C $(STAGE1_DIR) BUILD_DIR=$(ABS_BUILD_DIR)
+stage1: $(BUILD_LINK)
+	$(MAKE) -C "$(STAGE1_DIR)" BUILD_DIR=$(ABS_BUILD_DIR)
 
 # Regra para compilar o stage2 no sub-diretório
-stage2: $(BUILD_DIR)
-	$(MAKE) -C $(STAGE2_DIR) BUILD_DIR=$(ABS_BUILD_DIR)
+stage2: $(BUILD_LINK)
+	$(MAKE) -C "$(STAGE2_DIR)" BUILD_DIR=$(ABS_BUILD_DIR)
 
 # Regra para compilar o kernel no sub-diretório
-kernel: $(BUILD_DIR)
-	$(MAKE) -C $(KERNEL_DIR) BUILD_DIR=$(ABS_BUILD_DIR)
+kernel: $(BUILD_LINK)
+	$(MAKE) -C "$(KERNEL_DIR)" BUILD_DIR=$(ABS_BUILD_DIR)
 
 # Regra para compilar o código de protected mode no sub-diretório
-protected-mode: $(BUILD_DIR)
-	$(MAKE) -C $(PROTECTED_DIR) BUILD_DIR=$(ABS_BUILD_DIR)
+protected-mode: $(BUILD_LINK)
+	$(MAKE) -C "$(PROTECTED_DIR)" BUILD_DIR=$(ABS_BUILD_DIR)
 
 # Compilação da imagem de floppy combinando tudolear
 $(FLOPPY): stage1 stage2 kernel

@@ -29,30 +29,30 @@ all: $(BUILD_DIR)/kernel.bin
 
 # Bootstrap 16-bit (flat binary, 512 bytes)
 $(BOOT_BIN): $(BOOT_SRC) always
-	$(ASM) -f bin $< -o $@
+	$(ASM) -f bin "$<" -o "$@"
 
 # Assembly ELF32 objects
 $(ENTRY_OBJ): $(ENTRY_SRC) always
-	$(ASM) -f elf32 $< -o $@
+	$(ASM) -f elf32 "$<" -o "$@"
 
 $(ISR_OBJ): $(ISR_SRC) always
-	$(ASM) -f elf32 $< -o $@
+	$(ASM) -f elf32 "$<" -o "$@"
 
 # C objects
 $(BUILD_DIR)/kernel/c/%.o: %.c always
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c "$<" -o "$@"
 
 # Link ELF
 $(KERNEL_ELF): $(ENTRY_OBJ) $(ISR_OBJ) $(C_OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(LD) $(LDFLAGS) -o "$@" $^
 
 # Extrai flat binary do ELF
 $(KERNEL_CBIN): $(KERNEL_ELF)
-	$(OBJCOPY) -O binary $< $@
+	$(OBJCOPY) -O binary "$<" "$@"
 
 # Kernel final = boot.bin (512 bytes) + kernel_c.bin
 $(BUILD_DIR)/kernel.bin: $(BOOT_BIN) $(KERNEL_CBIN)
-	cat $^ > $@
+	cat $^ > "$@"
 
 always:
 	@mkdir -p $(BUILD_DIR)/kernel
