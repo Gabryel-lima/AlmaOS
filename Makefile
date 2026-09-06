@@ -41,7 +41,7 @@ BUILD_LINK=/tmp/almaos-build-$(shell whoami)
 ABS_BUILD_DIR=$(BUILD_LINK)
 
 # Declare phony targets to avoid conflitos com arquivos de mesmo nome
-.PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2 gfx kernel-tests
+.PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2 gfx kernel-tests devboot run-devboot smoke gfx-test
 
 #
 # Default target: build a floppy FAT12 image containing bootloader + kernel payload
@@ -97,6 +97,41 @@ $(FAT_BIN): $(FAT_SRC) | $(BUILD_DIR)
 run: $(FLOPPY)
 	qemu-system-i386 -drive file=$<,format=raw,if=floppy -boot a -serial stdio
 
+# ---------------------------------------------------------------------------
+# devboot: imagem de boot minima que NAO depende do OpenWatcom.
+#
+# O stage2 real e C de 16 bits compilado com wcc/wlink. Onde esse toolchain
+# nao existe (CI, contêiner limpo), `make all` nao roda e o kernel fica sem
+# nenhuma forma de ser executado. O devboot (tools/devboot/devboot.asm) e um
+# carregador so-NASM que cumpre o mesmo contrato de handoff do stage2 —
+# kernel em 0x12000, mapa E820 em 0x61000, boot_info em 0x60000 — e nada mais.
+#
+# Use `make run` para o caminho real de boot e `make run-devboot` para
+# exercitar o kernel sem o OpenWatcom.
+# ---------------------------------------------------------------------------
+DEVBOOT_SRC   := tools/devboot/devboot.asm
+DEVBOOT_BIN   := $(BUILD_DIR)/devboot.bin
+DEVBOOT_IMG   := $(BUILD_DIR)/devboot.img
+
+devboot: $(DEVBOOT_IMG)
+
+# O carregador le um numero fixo de setores, entao ele e montado depois do
+# kernel: o tamanho real de kernel.bin vira -DKERNEL_SECTORS.
+$(DEVBOOT_IMG): kernel $(DEVBOOT_SRC)
+	$(ASM) -f bin -DKERNEL_SECTORS=$$(( ($$(stat -c %s "$(BUILD_DIR)/kernel.bin") + 511) / 512 )) \
+		"$(DEVBOOT_SRC)" -o "$(DEVBOOT_BIN)"
+	dd if=/dev/zero bs=512 count=2880 of="$(DEVBOOT_IMG)" status=none
+	dd if="$(DEVBOOT_BIN)" conv=notrunc of="$(DEVBOOT_IMG)" status=none
+	dd if="$(BUILD_DIR)/kernel.bin" seek=1 conv=notrunc of="$(DEVBOOT_IMG)" status=none
+
+run-devboot: $(DEVBOOT_IMG)
+	qemu-system-i386 -drive file=$<,format=raw,if=floppy -boot a -serial stdio
+
+# Roteiro de fumaca: sobe o kernel sem tela, digita comandos pela COM1 e
+# confere as respostas. E o teste "isso roda mesmo?" do kernel.
+smoke: $(DEVBOOT_IMG)
+	tools/devboot/smoke.sh "$(DEVBOOT_IMG)"
+
 # Compile and run a small unit test that validates the generic instantiations
 test-includes: $(BUILD_DIR) $(TEST_BIN)
 	@echo "Running generic_test..."
@@ -104,6 +139,36 @@ test-includes: $(BUILD_DIR) $(TEST_BIN)
 
 $(TEST_BIN): $(TEST_SRC) | $(BUILD_DIR)
 	gcc -std=c11 -O2 -Wall $(TEST_SRC) -o $(TEST_BIN)
+
+# ---------------------------------------------------------------------------
+# gfx-test: exercita a copia vendorizada do nucleo do gfx (third_party/gfx).
+#
+# Duas checagens diferentes:
+#  1. compilar as tres fontes com -ffreestanding, provando que a copia continua
+#     sem dependencia de SO e portanto ainda pode ser embutida no kernel;
+#  2. rodar no host os contratos de que src/kernel/gfx_bridge.c depende —
+#     formato de cor, sentido do z-buffer, correcao perspectiva e pitch em
+#     bytes. Uma ressincronizacao com o gfx upstream pode mudar qualquer um
+#     deles sem quebrar nada la, e aqui quebraria a ponte grafica inteira.
+# ---------------------------------------------------------------------------
+GFX_VENDOR_DIR  := third_party/gfx
+GFX_VENDOR_SRC  := $(GFX_VENDOR_DIR)/core/gfx_math.c $(GFX_VENDOR_DIR)/core/gfx_raster.c \
+                   $(GFX_VENDOR_DIR)/core/gfx_framebuffer.c
+GFX_TEST_SRC    := tools/gfx_test/gfx_core_test.c
+GFX_TEST_BIN    := $(BUILD_DIR)/gfx_core_test
+
+gfx-test: $(GFX_TEST_BIN)
+	@echo "Verificando que a copia vendorizada compila com -ffreestanding..."
+	@for src in $(GFX_VENDOR_SRC); do \
+		gcc -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror \
+			-I$(GFX_VENDOR_DIR)/include -c "$$src" -o /dev/null || exit 1; \
+	done
+	@echo "Rodando os testes da copia vendorizada..."
+	./$(GFX_TEST_BIN)
+
+$(GFX_TEST_BIN): $(GFX_TEST_SRC) $(GFX_VENDOR_SRC) | $(BUILD_DIR)
+	gcc -std=c11 -O2 -Wall -Wextra -I$(GFX_VENDOR_DIR)/include \
+		$(GFX_TEST_SRC) $(GFX_VENDOR_SRC) -o $(GFX_TEST_BIN)
 
 # Compile and run host-side kernel tests located in src/kernel/tests
 kernel-tests: $(BUILD_DIR) $(KERNEL_TEST_KEYBOARD_BIN)
@@ -133,7 +198,11 @@ help:
 	@echo "  make bootloader - build the bootloader binary"
 	@echo "  make fat      - build the FAT utility"
 	@echo "  make run      - run the floppy image in QEMU"
+	@echo "  make devboot  - build a NASM-only boot image (no OpenWatcom needed)"
+	@echo "  make run-devboot - run the devboot image in QEMU"
+	@echo "  make smoke    - boot the kernel in QEMU and check the serial log"
 	@echo "  make kernel-tests - compile and run host-side kernel tests"
+	@echo "  make gfx-test - check the vendored gfx core (freestanding + contracts)"
 	@echo "  make test-includes - compile and run the generic test"
 	@echo "  make debug    - run the floppy image in Bochs"
 	@echo "  make clean    - clean the build directory"

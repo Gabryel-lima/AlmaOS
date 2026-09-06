@@ -8,11 +8,17 @@ O foco e manter o boot, o kernel e a camada grafica com contratos claros.
 - O stage2 carrega `kernel.bin` para `0x1200:0x0000` e faz far-jump para la.
 - O kernel agora entra em modo protegido 32-bit, instala GDT flat, IDT com 48 vetores,
   remapeia o PIC para `0x20-0x2F`, programa o PIT a ~100 Hz e habilita teclado via IRQ1.
-- A saida usa memoria VGA text mode direta (`0xB8000`, 80x25) com printf basico.
-- Um shell interativo aceita comandos: `help`, `clear`, `mem`, `ticks`, `reboot`.
-- A camada grafica ainda nao foi integrada: `gfx` (github.com/Gabryel-lima/gfx) e um
-  repositorio externo, ainda nao vendorizado aqui. Ver secao 5.
+- A saida usa memoria VGA text mode direta (`0xB8000`, 80x25) com printf basico,
+  espelhada na COM1 para depuracao e automacao.
+- Um shell interativo aceita comandos: `help`, `clear`, `mem`, `ticks`, `reboot`,
+  `echo`, `mode` e `gfxdemo`. Ele le do teclado ou da serial, o que chegar primeiro.
+- A camada grafica esta integrada: o nucleo portatil do `gfx` vive em
+  `third_party/gfx/` e a ponte com o hardware em `src/kernel/gfx_bridge.c`.
+  O kernel troca de modo de video em runtime por um trampolim de modo real.
+  Ver secao 5.
 - O stage2 continua em modo real 16-bit com OpenWatcom, cobrindo FAT12, disco e mapa E820.
+- Onde o OpenWatcom nao existe, `tools/devboot/devboot.asm` (so NASM) cumpre o mesmo
+  contrato de handoff e permite rodar o kernel sob QEMU; `make smoke` automatiza isso.
 - O demo de protected mode em [protected/src/main.asm](protected/src/main.asm) continua separado.
 - O shell usa tabela de dispatch com tokenizador de argc/argv; comandos portaveis vivem em `src/kernel/root/`.
 
@@ -31,8 +37,14 @@ O foco e manter o boot, o kernel e a camada grafica com contratos claros.
 - [x] Criar alocador bump para o kernel (stage2 valida heap contra E820).
 - [x] Reservar regioes fixas para stack, heap, buffers de I/O e framebuffer.
 - [x] Definir contratos de near/far e evitar overflow de 64 KB.
-- [ ] Criar alocador de paginas simples para modo protegido.
+- [x] Criar alocador de paginas simples para modo protegido (`src/kernel/kalloc.c`:
+      alocador bump alinhado a pagina sobre a maior regiao utilizavel do E820 acima
+      de 1 MiB). Nao libera bloco individual — e o suficiente enquanto as alocacoes
+      sao poucas e vivem pelo resto do boot, como framebuffers e z-buffer.
 - [ ] Implementar paginacao basica (identity mapping pelo menos ate 1 MB).
+      Nada disso comecou. Vale notar que ate agora nao fez falta: sem paginacao,
+      endereco linear e endereco fisico, e foi justamente isso que permitiu ao
+      kernel escrever num framebuffer VBE acima de 1 MiB sem mapear nada.
 
 ## 3. Entrada, tempo e depuracao
 
@@ -43,9 +55,15 @@ O foco e manter o boot, o kernel e a camada grafica com contratos claros.
 - [x] Implementar layout ABNT2 com tabelas completas (normal, shift, AltGr, tecla extra 0x73).
 - [x] Adicionar Caps Lock (toggle), AltGr (Right Alt) e rastreamento de prefixo 0xE0.
 - [x] Implementar `getopt()` e `getopt_long()` para parsing de opcoes em builtins (`getopt.c` / `getopt.h`).
+- [x] Adicionar serial port (COM1) como saida alternativa de log
+      (`src/kernel/serial.c`, 16550 a 38400 8N1, com teste de loopback para nao
+      fingir que ha UART onde nao ha). `vga_putchar()` espelha cada caractere,
+      entao o log existente virou capturavel sem um segundo printf a manter — e
+      sobrevive a troca para modo grafico, quando a tela de texto some.
+- [x] Aceitar entrada pela COM1 alem do teclado, para que uma sessao de shell
+      possa ser roteirizada (`tools/devboot/smoke.sh`).
 - [ ] Adicionar suporte a teclas especiais como eventos distintos (setas, F1-F12, Delete).
 - [ ] Implementar um timer de alta resolucao ou sleep baseado em ticks.
-- [ ] Adicionar serial port (COM1) como saida alternativa de log.
 
 ## 4. Disco e arquivos
 
@@ -59,67 +77,66 @@ O foco e manter o boot, o kernel e a camada grafica com contratos claros.
 
 ## 5. API grafica
 
-**Estado real (corrigido):** `gfx` (github.com/Gabryel-lima/gfx) e um repositorio
-separado, ainda **nao vendorizado** dentro do AlmaOS — nao existe `src/gfx/` neste
-repo nem nunca existiu (sem historico de commit). Uma versao anterior deste TODO
-descrevia um backend bare-metal (`gfx2d`, `vga_backend`) como se ja estivesse
-pronto; isso nunca foi implementado. Esta secao documenta o estado real e o
-gancho de integracao que ja existe hoje, para nao repetir o mesmo erro.
+**Estado: integrado.** O `gfx` (github.com/Gabryel-lima/gfx) deixou de ser so um
+repositorio vizinho: o nucleo portatil dele esta vendorizado em `third_party/gfx/`
+e compila com o mesmo toolchain do kernel. Uma versao anterior deste TODO
+descrevia um backend bare-metal (`gfx2d`, `vga_backend`) que nunca existiu;
+esta secao descreve o que ha de fato, com os arquivos.
 
-### O que ja existe hoje, do lado do AlmaOS
+### O caminho completo, hoje
 
-O contrato de handoff bootloader → kernel ja reserva espaco para um framebuffer,
-mesmo sem nenhum backend grafico ligado nele:
+1. **Trampolim de modo real** — `src/kernel/realmode.{asm,c,h}`. O kernel entra em
+   modo protegido no boot e, com isso, perde acesso as rotinas da BIOS, que sao
+   codigo de 16 bits esperando modo real. O trampolim faz PM32 -> RM16 -> PM32
+   para chamadas pontuais.
+2. **Selecao de modo de video** — `src/kernel/video.{c,h}`. Por cima do trampolim:
+   VGA modo 13h (320x200, 8 bits, sempre disponivel) e VBE 2.0+ com framebuffer
+   linear (resolucoes maiores e cor direta, quando a BIOS de video oferecer).
+3. **Memoria** — `src/kernel/kalloc.{c,h}`. Um backbuffer de 640x480 em 32 bits
+   pede 1,2 MiB; o heap que o stage2 reserva tem 128 KiB.
+4. **FPU** — `src/kernel/fpu.{c,h}`. O rasterizador do gfx trabalha em ponto
+   flutuante.
+5. **Nucleo do gfx** — `third_party/gfx/` (matematica, framebuffer generico,
+   rasterizador por software com z-buffer). Veja o README de la para a
+   procedencia e como ressincronizar.
+6. **Ponte** — `src/kernel/gfx_bridge.{c,h}`. Unico ponto do kernel que conhece
+   os dois lados.
+7. **Comandos** — `src/kernel/cmd_video.c`: `mode` e `gfxdemo`.
 
-- `src/bootloader/stage2/memdefs.h` reserva `0xA0000`–`0xBFFFF` para
-  framebuffer/VGA (`MEMORY_FRAMEBUFFER_ADDR`, `MEMORY_FRAMEBUFFER_SIZE`).
-- `src/bootloader/stage2/memory.h` / `memory.c` ja aceitam `framebuffer`,
-  `framebufferWidth/Height/Pitch/Bpp/Flags` em `MEMORY_BootInfo_Init()`.
-- `src/kernel/include/boot_info.h` espelha os mesmos campos em
-  `boot_info_raw_t`, no endereco fixo `BOOT_INFO_ADDR = 0x60000`.
-- **Porem**, a chamada real em `src/bootloader/stage2/main.c` passa todos os
-  seis argumentos de framebuffer como `0` e `MEMORY_VIDEO_MODE_TEXT` — nenhuma
-  chamada VBE/VESA existe ainda em lugar nenhum do stage2.
+### Decisoes que valem registrar
 
-Ou seja: o contrato de dados existe e esta bem desenhado; falta so alguem
-preenche-lo (ativar um modo de video) e alguem le-lo do lado do kernel.
+- **Quem troca o modo e o kernel, nao o bootloader.** A versao anterior deste
+  arquivo previa ligar um modo grafico no stage2. Isso teria custado a saida de
+  texto do kernel (panic, log, shell) logo no boot. O stage2 continua entregando
+  o controle em modo texto 80x25 — e agora descreve esse modo no `boot_info`, em
+  vez de mandar seis zeros como se nao houvesse framebuffer nenhum.
+- **A ponte converte, nao aponta.** O gfx desenha num backbuffer RGBA de 32 bits
+  e a ponte converte para o formato do modo ativo. Apontar o gfx direto para o
+  framebuffer do hardware seria mais rapido e errado: o QEMU reporta R@16 G@8 B@0
+  (BGRX) enquanto o gfx produz `0xRRGGBBAA`, e no modo 13h nem ha 32 bits por pixel.
+- **A paleta 3-3-2 do modo 13h nao e estetica, e aritmetica.** Com ela o indice de
+  8 bits vira funcao pura da cor de 24 bits, e a conversao no `present` e
+  truncamento — sem tabela de busca nem dithering.
+- **Os descritores de 16 bits da GDT tem a base preenchida em runtime.** Eles
+  precisam apontar para o stub do trampolim, cujo endereco tem um dono so
+  (`REALMODE_STUB_ADDR`, em `include/realmode.h`). Fixar o valor em `boot.asm`
+  criaria uma segunda fonte da verdade.
 
-### Do lado do `gfx` (repositorio externo)
+### O que falta aqui
 
-O `gfx` foi redesenhado para separar um nucleo portatil (`include/` + `core/`,
-sem dependencia de SO alem da libc padrao: matematica, rasterizador por
-software, framebuffer generico `pixels/width/height/pitch`) de extras
-especificos de Linux (`platform/linux/`: `/dev/fb0`, janela X11/OpenGL). O
-nucleo (`gfx_math.c` + `gfx_raster.c` + `gfx_framebuffer.c`) ja e validado no
-proprio `gfx` com um alvo de CMake (`GFX_CORE_FREESTANDING_CHECK`) que compila
-essas tres fontes com `-ffreestanding`, exatamente para provar que dao para
-embutir num kernel. Isso ainda **nao foi portado para dentro do AlmaOS** — e
-so a base que torna essa integracao factivel sem reescrever um rasterizador do zero.
-
-### O que falta para uma integracao real
-
-- [ ] Implementar trampolim de modo real para BIOS `int 10h` (o kernel ja esta
-      em modo protegido 32-bit e nao pode chamar a BIOS diretamente).
-- [ ] Ativar um modo de video no stage2 — mais simples primeiro: VGA mode 13h
-      (320x200, 256 cores, endereco fixo `0xA0000`, sem VBE); depois VBE/VESA
-      para resolucoes maiores (o `boot_info` ja tem `fb_pitch`/`fb_bpp` para isso).
-- [ ] Preencher de verdade os argumentos de framebuffer em
-      `MEMORY_BootInfo_Init()` (hoje todos zero) em vez de so reservar o espaco.
-- [ ] Copiar `include/` + `core/` do `gfx` para dentro do AlmaOS (ex.:
-      `third_party/gfx/`) e compilar com o toolchain `-m32 -ffreestanding` do kernel.
-- [ ] Escrever a ponte kernel-especifica: ler `boot_info()->framebuffer_far`
-      via `far_to_flat()`, montar um `Framebuffer` do `gfx` (gfx_raster.h) em
-      cima dele, e expor isso como um modulo opcional do kernel.
-- [ ] So depois disso faz sentido pensar em sprites, fontes, blit — tudo isso
-      ja existe no `gfx` como conceito (rasterizador + framebuffer), o trabalho
-      aqui e so a ponte, nao reescrever a parte grafica.
+- [ ] Carregar malhas de disco em vez de gerar geometria no proprio codigo
+      (depende de FAT no kernel — secao 4).
+- [ ] Fontes e sprites por cima do rasterizador (depende de recursos em disco —
+      secao 6).
+- [ ] Considerar apontar o gfx direto para o framebuffer nos modos de 32 bits,
+      evitando a copia do `present`. So vale a pena depois de haver algo pesado
+      o suficiente para o custo aparecer.
 
 ### Contrato minimo (mantido)
 
 O kernel nao chama rotinas de video dispersas. Toda saida visual passa por:
-- `vga.c` para modo texto (shell, panic, log) — ja funciona hoje.
-- Um modulo grafico opcional (a integrar) para modo grafico, construido sobre
-  o nucleo do `gfx`, quando ativado.
+- `vga.c` para modo texto (shell, panic, log);
+- `gfx_bridge.c` para modo grafico, construido sobre o nucleo do `gfx`.
 
 ## 6. Recursos graficos
 
@@ -139,7 +156,12 @@ O kernel nao chama rotinas de video dispersas. Toda saida visual passa por:
 - [x] Implementar primitivas genericas type-safe (`generic.h`, `generic_inst.h`) com testes no host.
 - [ ] Adicionar comando `ls` para listar arquivos do disco (requer FAT no kernel).
 - [ ] Adicionar comando `cat` para exibir conteudo de arquivo (requer FAT no kernel).
-- [ ] Adicionar comando `mode` para trocar modo de video (requer trampolim real-mode).
+- [x] Adicionar comando `mode` para trocar modo de video (o trampolim de modo real
+      existe agora; veja secao 5). Aceita `text`, `vga13` e `LARGURAxALTURA[xBPP]`.
+- [x] Adicionar comando `gfxdemo`, que desenha um cubo com o rasterizador do gfx.
+      A variante `gfxdemo <modo> still` desenha um quadro em angulo fixo e le o
+      framebuffer do hardware de volta, resumindo cobertura e numero de cores —
+      e o que torna o caminho grafico verificavel sem tela.
 - [ ] Adicionar historico de comandos (seta para cima/baixo).
 - [ ] Adicionar autocompletar por Tab baseado na `cmd_table`.
 - [ ] Planejar multitarefa somente depois do kernel estar estavel.
@@ -150,9 +172,23 @@ O kernel nao chama rotinas de video dispersas. Toda saida visual passa por:
 - [x] Makefile do kernel compila bootstrap 16-bit + C 32-bit com GCC/NASM/LD.
 - [x] Imagem de floppy FAT12 com stage1 + stage2 + kernel.bin.
 - [x] CMake wrapping os targets do Makefile com CTest.
-- [ ] Adicionar target `make gfx-test` para compilar e rodar testes do gfx no host.
-- [ ] Adicionar CI para build automatico (GCC -m32 + NASM + OpenWatcom).
-- [ ] Adicionar target `make run-graphics` para testar modo grafico no QEMU.
+- [x] Adicionar target `make gfx-test` para compilar e rodar testes do gfx no host.
+      Faz duas coisas: compila a copia vendorizada com `-ffreestanding` (provando que
+      ela continua embutivel) e verifica no host os contratos de que a ponte depende
+      — formato de cor, sentido do z-buffer, pitch em bytes e correcao perspectiva.
+      Uma ressincronizacao com o gfx upstream pode mudar qualquer um deles sem
+      quebrar nada la, e aqui quebraria a ponte inteira.
+- [x] Adicionar carregador de desenvolvimento so-NASM (`tools/devboot/`) e o alvo
+      `make smoke`, que sobe o kernel no QEMU sem tela, digita comandos pela COM1 e
+      confere as respostas.
+- [x] Adicionar CI para build automatico (`.github/workflows/kernel-ci.yml`).
+      **Cobertura parcial, de proposito:** o OpenWatcom nao existe nos runners do
+      GitHub, entao o CI cobre o kernel 32-bit, o gfx vendorizado, os testes de host
+      e o boot sob QEMU pelo devboot. Uma regressao no stage2 ainda precisa de uma
+      maquina com o OpenWatcom instalado.
+- [x] Adicionar target para testar modo grafico no QEMU: `make smoke` inclui os
+      casos `gfxdemo 320x200x32 still` e `gfxdemo vga13 still`, e `make run-devboot`
+      abre a sessao interativa.
 
 ## 9. Criterio de pronto
 
@@ -161,6 +197,7 @@ O projeto passa de fase quando existir:
 - [x] Boot previsivel (stage1 → stage2 → kernel em modo protegido).
 - [x] Kernel carregado de forma consistente com IDT, PIC e PIT.
 - [x] Memoria base e interrupcoes sob controle.
-- [ ] API grafica escolhida e isolada (gfx externo definido; integracao no kernel ainda por fazer — ver secao 5).
+- [x] API grafica escolhida e isolada: nucleo do gfx vendorizado em `third_party/gfx/`,
+      hardware isolado atras de `src/kernel/gfx_bridge.c` (ver secao 5).
 - [ ] Recursos carregados por uma rota unica (disco no kernel).
 - [x] Fluxo de depuracao que nao dependa de suposicao (panic, assert, klog, shell).

@@ -1,6 +1,7 @@
 #include "include/vga.h"
 #include "include/io.h"
 #include "include/string.h"
+#include "include/serial.h"
 
 /* VGA text mode CRT controller ports */
 #define VGA_CTRL_REG    0x3D4   // Registro de controle do CRT (indexador)
@@ -55,6 +56,11 @@ void vga_set_color(uint8_t fg, uint8_t bg) {
 
 void vga_putchar(char c) {
     volatile uint16_t *vga = VGA_ADDR;
+
+    /* Espelha na COM1 para que o log sobreviva a troca de modo de video e
+     * possa ser capturado por `qemu -serial stdio`. No-op enquanto a serial
+     * nao tiver sido inicializada com sucesso. */
+    serial_putchar(c);
 
     if (c == '\n') {
         vga_col = 0;

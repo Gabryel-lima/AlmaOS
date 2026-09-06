@@ -1,0 +1,41 @@
+name: Kernel CI
+
+# O caminho de boot completo (stage1 + stage2 + imagem FAT12) depende do
+# OpenWatcom, que nao existe nos runners do GitHub. O que este workflow cobre e
+# tudo o que nao depende dele: o kernel 32-bit, o nucleo do gfx vendorizado, os
+# testes de host e o boot sob QEMU pelo carregador devboot (tools/devboot).
+#
+# Ou seja: uma regressao no kernel e pega automaticamente; uma regressao no
+# stage2 ainda precisa de uma maquina com o OpenWatcom instalado.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  kernel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gcc-multilib nasm qemu-system-x86
+
+      - name: Build kernel
+        run: make kernel
+
+      - name: Build devboot image
+        run: make devboot
+
+      - name: Boot smoke test
+        run: make smoke
+
+      - name: Host-side kernel tests
+        run: make kernel-tests
+
+      - name: Vendored gfx core tests
+        run: make gfx-test

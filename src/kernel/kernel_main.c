@@ -1,11 +1,16 @@
 #include "include/kernel.h"
 #include "include/vga.h"
+#include "include/serial.h"
 #include "include/idt.h"
 #include "include/pic.h"
 #include "include/pit.h"
 #include "include/keyboard.h"
 #include "include/panic.h"
 #include "include/shell.h"
+#include "include/realmode.h"
+#include "include/video.h"
+#include "include/kalloc.h"
+#include "include/fpu.h"
 
 /* Wrappers de IRQ que delegam para os drivers e enviam EOI */
 
@@ -22,43 +27,76 @@ static void irq1_handler(interrupt_frame_t *frame) {
 }
 
 void kernel_main(void) {
-    /* 1. VGA text mode */
+    /* 1. Serial primeiro: a partir daqui todo vga_putchar tambem sai na COM1,
+     *    entao as proprias mensagens de inicializacao ficam capturaveis. */
+    bool serial_ok = serial_init();
+
+    /* 2. VGA text mode */
     vga_init();
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     vga_puts("AlmaOS kernel inicializando...\n\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
+    vga_printf("[%s] Log serial COM1\n", serial_ok ? "OK" : "--");
 
-    /* 2. IDT */
+    /* 3. IDT */
     idt_init();
     vga_puts("[OK] IDT carregada\n");
 
-    /* 3. PIC */
+    /* 4. PIC */
     pic_remap(PIC_MASTER_OFFSET, PIC_SLAVE_OFFSET);
     vga_puts("[OK] PIC remapeado (IRQ 0x20-0x2F)\n");
 
-    /* 4. PIT (~100 Hz) */
+    /* 5. PIT (~100 Hz) */
     pit_init(PIT_DEFAULT_FREQ);
     idt_register_handler(0x20, irq0_handler);
     pic_clear_mask(0);
     vga_puts("[OK] PIT configurado (100 Hz)\n");
 
-    /* 5. Teclado */
+    /* 6. Teclado */
     keyboard_init();
     idt_register_handler(0x21, irq1_handler);
     pic_clear_mask(1);
     vga_puts("[OK] Teclado habilitado (IRQ 1)\n");
 
-    /* 6. Habilita interrupcoes */
+    /* 7. Habilita interrupcoes */
     sti();
     vga_puts("[OK] Interrupcoes habilitadas\n\n");
 
-    /* 7. Mensagem de boas-vindas */
+    /* 8. Trampolim de modo real + consulta de video.
+     *    Depois do PIC porque realmode_int() mascara e restaura as IRQs. */
+    if (realmode_init()) {
+        vga_puts("[OK] Trampolim de modo real (BIOS int 10h)\n");
+        video_init();
+        if (video_vbe_available())
+            vga_printf("[OK] VBE %u.%u disponivel\n",
+                       (video_vbe_version() >> 8) & 0xFF, video_vbe_version() & 0xFF);
+        else
+            vga_puts("[--] VBE indisponivel; so VGA 13h\n");
+    } else {
+        vga_puts("[--] Trampolim de modo real indisponivel\n");
+    }
+
+    /* 9. FPU e memoria alta: pre-requisitos do caminho grafico. O rasterizador
+     *    do gfx trabalha em ponto flutuante, e um backbuffer de 32 bits nao
+     *    cabe nos 128 KiB de heap que o stage2 reserva abaixo de 1 MiB. */
+    if (fpu_init())
+        vga_puts("[OK] FPU x87 habilitada\n");
+    else
+        vga_puts("[--] FPU x87 ausente; o caminho grafico nao vai funcionar\n");
+
+    if (kalloc_init())
+        vga_printf("[OK] Memoria alta: base=0x%08x, %u KiB\n",
+                   kalloc_base(), kalloc_capacity() / 1024u);
+    else
+        vga_puts("[--] Nenhuma regiao utilizavel acima de 1 MiB\n");
+
+    /* 10. Mensagem de boas-vindas */
     vga_set_color(VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
     vga_puts("Bem-vindo ao AlmaOS!\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
     vga_puts("Digite 'help' para lista de comandos.\n\n");
 
-    /* 8. Shell interativo */
+    /* 11. Shell interativo */
     shell_init();
     shell_run();
 

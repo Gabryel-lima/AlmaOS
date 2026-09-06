@@ -263,13 +263,28 @@ Para rodar no Bochs usando o arquivo de configuração local:
 make debug
 ```
 
+### Sem OpenWatcom
+
+`make run` monta o caminho de boot real, que depende do OpenWatcom para o stage2.
+Onde esse toolchain não existe, `tools/devboot/` é um carregador só-NASM que
+cumpre o mesmo contrato de handoff que o kernel espera — e nada mais. Não
+substitui o stage2: não tem FAT12 nem driver de disco com retry.
+
+```bash
+make run-devboot   # sessão interativa
+make smoke         # roteirizado: sobe sem tela, digita comandos pela COM1
+                   # e confere a saída serial
+```
+
 ## 📂 Estrutura do Projeto
 
 - `src/bootloader/`: Código do setor de boot (stage1 em Assembly, stage2 em C/Assembly com Watcom 16-bit).
 - `src/kernel/`: Código principal do kernel (C/Assembly com GCC 32-bit, modo protegido).
   - `src/kernel/root/`: Comandos do shell com assinatura portável `int fn(int argc, char **argv)`. Cada arquivo é compilado como objeto independente e registrado na tabela de dispatch do shell.
   - `src/kernel/tests/`: Utilitários de teste compilados no host: primitivas genéricas (`generic.h`, `generic_inst.h`) e validação de scancodes de teclado (`test_keyboard.c`).
-- Gráficos: ainda não integrado ao repositório. [gfx](https://github.com/Gabryel-lima/gfx) é uma biblioteca separada (núcleo portátil de rasterização/framebuffer por software, com backend Linux/X11/OpenGL opcional) pensada para virar um módulo do kernel futuramente — veja a seção 5 do `TODO.md`.
+- `third_party/gfx/`: núcleo portátil do [gfx](https://github.com/Gabryel-lima/gfx) vendorizado — matemática, framebuffer genérico e rasterizador de triângulos por software, compilados com o mesmo toolchain `-m32 -ffreestanding` do kernel. A ponte com o hardware fica em `src/kernel/gfx_bridge.c`, e quem escolhe o modo de vídeo é o kernel em runtime, pelo trampolim de modo real (`src/kernel/realmode.h`). Veja `third_party/gfx/README.md` e a seção 5 do `TODO.md`.
+- `tools/devboot/`: carregador de desenvolvimento só-NASM, para rodar o kernel onde o OpenWatcom não existe, mais o roteiro de fumaça (`make smoke`) que sobe o kernel no QEMU sem tela e confere a saída pela COM1.
+- `tools/gfx_test/`: verificações no host dos contratos de que a ponte gráfica depende.
 - `build/`: Arquivos binários gerados e imagem final.
 - `.vscode/`: Configurações do VS Code (IntelliSense, tasks, launch).
 - `Makefile`: Script de automação do build.

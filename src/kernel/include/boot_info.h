@@ -64,11 +64,17 @@ typedef struct __attribute__((packed)) {
  *  @param heap_offset Deslocamento atual dentro da regiao de heap (inicialmente 0).
  *  @param io_buffer_far Far pointer para um buffer reservado para I/O (usado para leitura de setores, etc).
  *  @param io_buffer_size Tamanho do buffer de I/O em bytes.
- *  @param framebuffer_far Far pointer para o framebuffer, se existir (modo grafico).
- *  @param fb_width Largura do framebuffer em pixels.
- *  @param fb_height Altura do framebuffer em pixels.
+ *  @param framebuffer_far Far pointer para o framebuffer ativo no boot.
+ *  @param fb_width Largura do framebuffer em pixels — ou em colunas de
+ *         caractere, enquanto video_mode for texto.
+ *  @param fb_height Altura do framebuffer em pixels — ou em linhas de
+ *         caractere, enquanto video_mode for texto.
  *  @param fb_pitch Pitch do framebuffer em bytes por linha.
- *  @param fb_bpp Bits por pixel do framebuffer.
+ *  @param fb_bpp Bits por pixel do framebuffer — ou por celula (caractere +
+ *         atributo, 16 bits), enquanto video_mode for texto.
+ *  @note O stage2 descreve aqui o modo texto com que entrega o controle. Para
+ *        trocar de modo em runtime o kernel usa video.h, e a descricao do modo
+ *        corrente passa a ser a de `video_current()`, nao esta.
  *  @param fb_flags Flags auxiliares de video (bit 0 = framebuffer linear, bit 1 = framebuffer suporta escrita direta).
  */
 typedef struct __attribute__((packed)) {

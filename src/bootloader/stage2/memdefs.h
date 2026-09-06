@@ -44,9 +44,42 @@
 #define MEMORY_KERNEL_HEAP_SIZE   0x00020000        // 0x00078000 - 0x00097FFF - heap simples do kernel, validado pelo mapa de memória
 #define MEMORY_HEAP_MIN_PHYSICAL  0x00078000        // Endereço físico mínimo do heap do kernel, usado para validação contra o mapa de memória E820
 
+// 0x000B8000 - 0x000B8F9F - framebuffer do modo texto VGA (80x25 células de 2 bytes)
+// É o modo que está de fato ativo quando o stage2 entrega o controle ao kernel,
+// e por isso é ele que o boot_info descreve. Enquanto VideoMode for
+// MEMORY_VIDEO_MODE_TEXT, FramebufferWidth/Height contam células de caractere,
+// não pixels, e FramebufferBpp conta os bits de uma célula (caractere + atributo).
+#define MEMORY_TEXT_FRAMEBUFFER_ADDR    ((void far*)0xB8000000)  // 0xB800:0000 = 0x000B8000
+#define MEMORY_TEXT_FRAMEBUFFER_WIDTH   80      // colunas
+#define MEMORY_TEXT_FRAMEBUFFER_HEIGHT  25      // linhas
+#define MEMORY_TEXT_FRAMEBUFFER_PITCH   160     // bytes por linha (80 células de 2 bytes)
+#define MEMORY_TEXT_FRAMEBUFFER_BPP     16      // bits por célula
+
 // 0x000A0000 - 0x000BFFFF - framebuffer/VGA reservado para backend gráfico futuro
-#define MEMORY_FRAMEBUFFER_ADDR   ((void far*)0xA0000000)   // 0x000A0000 - 0x000BFFFF - framebuffer/VGA reservado para backend gráfico futuro
-#define MEMORY_FRAMEBUFFER_SIZE   0x00020000        // 0x000A0000 - 0x000BFFFF - framebuffer/VGA reservado para backend gráfico futuro
+#define MEMORY_FRAMEBUFFER_ADDR   ((void far*)0xA0000000)   // 0x000B8000 - 0x000B8F9F - framebuffer do modo texto VGA (80x25 células de 2 bytes)
+// É o modo que está de fato ativo quando o stage2 entrega o controle ao kernel,
+// e por isso é ele que o boot_info descreve. Enquanto VideoMode for
+// MEMORY_VIDEO_MODE_TEXT, FramebufferWidth/Height contam células de caractere,
+// não pixels, e FramebufferBpp conta os bits de uma célula (caractere + atributo).
+#define MEMORY_TEXT_FRAMEBUFFER_ADDR    ((void far*)0xB8000000)  // 0xB800:0000 = 0x000B8000
+#define MEMORY_TEXT_FRAMEBUFFER_WIDTH   80      // colunas
+#define MEMORY_TEXT_FRAMEBUFFER_HEIGHT  25      // linhas
+#define MEMORY_TEXT_FRAMEBUFFER_PITCH   160     // bytes por linha (80 células de 2 bytes)
+#define MEMORY_TEXT_FRAMEBUFFER_BPP     16      // bits por célula
+
+// 0x000A0000 - 0x000BFFFF - framebuffer/VGA reservado para backend gráfico futuro
+#define MEMORY_FRAMEBUFFER_SIZE   0x00020000        // 0x000B8000 - 0x000B8F9F - framebuffer do modo texto VGA (80x25 células de 2 bytes)
+// É o modo que está de fato ativo quando o stage2 entrega o controle ao kernel,
+// e por isso é ele que o boot_info descreve. Enquanto VideoMode for
+// MEMORY_VIDEO_MODE_TEXT, FramebufferWidth/Height contam células de caractere,
+// não pixels, e FramebufferBpp conta os bits de uma célula (caractere + atributo).
+#define MEMORY_TEXT_FRAMEBUFFER_ADDR    ((void far*)0xB8000000)  // 0xB800:0000 = 0x000B8000
+#define MEMORY_TEXT_FRAMEBUFFER_WIDTH   80      // colunas
+#define MEMORY_TEXT_FRAMEBUFFER_HEIGHT  25      // linhas
+#define MEMORY_TEXT_FRAMEBUFFER_PITCH   160     // bytes por linha (80 células de 2 bytes)
+#define MEMORY_TEXT_FRAMEBUFFER_BPP     16      // bits por célula
+
+// 0x000A0000 - 0x000BFFFF - framebuffer/VGA reservado para backend gráfico futuro
 
 // 0x00020000 - 0x00030000 - stage2
 
