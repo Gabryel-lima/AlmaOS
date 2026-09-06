@@ -41,7 +41,7 @@ BUILD_LINK=/tmp/almaos-build-$(shell whoami)
 ABS_BUILD_DIR=$(BUILD_LINK)
 
 # Declare phony targets to avoid conflitos com arquivos de mesmo nome
-.PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2 gfx kernel-tests
+.PHONY: all bootloader kernel protected-mode fat run debug test clean help stage1 stage2 gfx kernel-tests devboot run-devboot smoke
 
 #
 # Default target: build a floppy FAT12 image containing bootloader + kernel payload
@@ -97,6 +97,41 @@ $(FAT_BIN): $(FAT_SRC) | $(BUILD_DIR)
 run: $(FLOPPY)
 	qemu-system-i386 -drive file=$<,format=raw,if=floppy -boot a -serial stdio
 
+# ---------------------------------------------------------------------------
+# devboot: imagem de boot minima que NAO depende do OpenWatcom.
+#
+# O stage2 real e C de 16 bits compilado com wcc/wlink. Onde esse toolchain
+# nao existe (CI, contêiner limpo), `make all` nao roda e o kernel fica sem
+# nenhuma forma de ser executado. O devboot (tools/devboot/devboot.asm) e um
+# carregador so-NASM que cumpre o mesmo contrato de handoff do stage2 —
+# kernel em 0x12000, mapa E820 em 0x61000, boot_info em 0x60000 — e nada mais.
+#
+# Use `make run` para o caminho real de boot e `make run-devboot` para
+# exercitar o kernel sem o OpenWatcom.
+# ---------------------------------------------------------------------------
+DEVBOOT_SRC   := tools/devboot/devboot.asm
+DEVBOOT_BIN   := $(BUILD_DIR)/devboot.bin
+DEVBOOT_IMG   := $(BUILD_DIR)/devboot.img
+
+devboot: $(DEVBOOT_IMG)
+
+# O carregador le um numero fixo de setores, entao ele e montado depois do
+# kernel: o tamanho real de kernel.bin vira -DKERNEL_SECTORS.
+$(DEVBOOT_IMG): kernel $(DEVBOOT_SRC)
+	$(ASM) -f bin -DKERNEL_SECTORS=$$(( ($$(stat -c %s "$(BUILD_DIR)/kernel.bin") + 511) / 512 )) \
+		"$(DEVBOOT_SRC)" -o "$(DEVBOOT_BIN)"
+	dd if=/dev/zero bs=512 count=2880 of="$(DEVBOOT_IMG)" status=none
+	dd if="$(DEVBOOT_BIN)" conv=notrunc of="$(DEVBOOT_IMG)" status=none
+	dd if="$(BUILD_DIR)/kernel.bin" seek=1 conv=notrunc of="$(DEVBOOT_IMG)" status=none
+
+run-devboot: $(DEVBOOT_IMG)
+	qemu-system-i386 -drive file=$<,format=raw,if=floppy -boot a -serial stdio
+
+# Roteiro de fumaca: sobe o kernel sem tela, digita comandos pela COM1 e
+# confere as respostas. E o teste "isso roda mesmo?" do kernel.
+smoke: $(DEVBOOT_IMG)
+	tools/devboot/smoke.sh "$(DEVBOOT_IMG)"
+
 # Compile and run a small unit test that validates the generic instantiations
 test-includes: $(BUILD_DIR) $(TEST_BIN)
 	@echo "Running generic_test..."
@@ -133,6 +168,9 @@ help:
 	@echo "  make bootloader - build the bootloader binary"
 	@echo "  make fat      - build the FAT utility"
 	@echo "  make run      - run the floppy image in QEMU"
+	@echo "  make devboot  - build a NASM-only boot image (no OpenWatcom needed)"
+	@echo "  make run-devboot - run the devboot image in QEMU"
+	@echo "  make smoke    - boot the kernel in QEMU and check the serial log"
 	@echo "  make kernel-tests - compile and run host-side kernel tests"
 	@echo "  make test-includes - compile and run the generic test"
 	@echo "  make debug    - run the floppy image in Bochs"

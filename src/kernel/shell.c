@@ -6,6 +6,7 @@
 #include "include/boot_info.h"
 #include "include/string.h"
 #include "include/io.h"
+#include "include/serial.h"
 
 #include "root/echo.h"
 
@@ -140,6 +141,34 @@ static void execute_cmd(void) {
     vga_printf("Comando desconhecido: %s\n", argv[0]);
 }
 
+/** Le um caractere do console, aceitando teclado ou COM1.
+ *
+ *  O teclado e a entrada normal. A COM1 existe para automacao: com
+ *  `qemu -serial stdio` da para roteirizar uma sessao de shell e conferir a
+ *  saida sem um humano digitando. `hlt` espera a proxima interrupcao — o PIT
+ *  a 100 Hz garante que o laco acorde para reavaliar a serial.
+ *
+ *  @return Caractere lido; converte CR em '\n' e DEL em '\b' para que
+ *          terminais seriais se comportem como o teclado.
+ */
+static char shell_read_char(void) {
+    for (;;) {
+        if (keyboard_has_data())
+            return keyboard_getchar();
+
+        if (serial_has_data()) {
+            char c = serial_getchar();
+            if (c == '\r')
+                return '\n';
+            if (c == 0x7F)
+                return '\b';
+            return c;
+        }
+
+        __asm__ volatile("hlt");
+    }
+}
+
 void shell_init(void) {
     cmd_len = 0;
 }
@@ -150,7 +179,7 @@ void shell_run(void) {
     vga_set_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
 
     for (;;) {
-        char c = keyboard_getchar();
+        char c = shell_read_char();
 
         if (c == '\n') {
             vga_putchar('\n');
