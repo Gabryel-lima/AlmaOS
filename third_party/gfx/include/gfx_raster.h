@@ -45,6 +45,29 @@ void gfx_fb_clear(Framebuffer *fb, uint32_t rgba);
 
 /**
  * Rasteriza um único triângulo no framebuffer e no z-buffer fornecidos.
+ *
+ * Contrato dos vértices:
+ * - `x` e `y` estão em pixels de tela (o centro do pixel (i,j) é i+0.5, j+0.5);
+ * - `z` é a profundidade já comparável, interpolada linearmente em espaço de
+ *   tela — o que é correto para um z de NDC, isto é, já dividido por w;
+ * - `w` é o w de clip do vértice, usado para corrigir a perspectiva na
+ *   interpolação das cores. Passar 1.0 em todos os três dá interpolação afim,
+ *   que é o comportamento correto para projeção ortográfica e o que os
+ *   chamadores mais antigos assumiam.
+ *
+ * Interpolar cor linearmente em espaço de tela sob projeção perspectiva é
+ * errado: é o que faz a cor de uma superfície inclinada "escorregar" na
+ * direção do ponto de fuga. Por isso as cores são interpoladas com pesos
+ * divididos por w e renormalizados.
+ *
+ * Pixels exatamente sobre uma aresta são resolvidos pela regra top-left, de
+ * modo que dois triângulos que compartilham uma aresta não desenhem o mesmo
+ * pixel duas vezes nem deixem buraco entre eles.
+ *
+ * Não há clipping: um vértice com w <= 0 está atrás do plano da câmera e faz
+ * a interpolação cair para o modo afim, em vez de produzir cores sem sentido.
+ * Cortar o triângulo contra o frustum é responsabilidade de quem chama.
+ *
  * @param fb Ponteiro para o framebuffer
  * @param zbuf Ponteiro para o z-buffer
  * @param p0, p1, p2 Vértices do triângulo (coordenadas homogêneas)

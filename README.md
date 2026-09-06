@@ -175,6 +175,20 @@ Example `launch.json` to launch QEMU is also provided; note that debugging a flo
 make run
 ```
 
+### Without OpenWatcom
+
+`make run` builds the real boot path, which needs OpenWatcom for stage2. Where
+that toolchain isn't available — CI, a clean container — `tools/devboot/` is a
+NASM-only loader that satisfies the same handoff contract the kernel expects
+(kernel at `0x12000`, E820 map at `0x61000`, boot info at `0x60000`) and nothing
+more. It is not a stage2 replacement: no FAT12, no disk driver with retries.
+
+```bash
+make run-devboot   # interactive session
+make smoke         # scripted: boots headless, drives the shell over COM1,
+                   # checks the serial output
+```
+
 ### Bochs (debugging)
 
 ```bash
@@ -187,7 +201,9 @@ make debug
 - `src/kernel/`: Kernel sources (C/assembly, GCC 32-bit protected mode).
   - `src/kernel/root/`: Shell commands with portable signature `int fn(int argc, char **argv)`.
   - `src/kernel/tests/`: Host-side test utilities.
-- Graphics: not vendored yet. [gfx](https://github.com/Gabryel-lima/gfx) is a separate library (portable software rasterizer/framebuffer core, optional Linux/X11/OpenGL backend) meant to be integrated as a kernel module later — see `TODO.md` section 5.
+- `third_party/gfx/`: vendored portable core of [gfx](https://github.com/Gabryel-lima/gfx) — math, generic framebuffer and software triangle rasterizer, built with the kernel's own `-m32 -ffreestanding` toolchain. See `third_party/gfx/README.md` for provenance and how to resync.
+- `tools/devboot/`: NASM-only development loader and the scripted boot smoke test.
+- `tools/gfx_test/`: host-side checks for the contracts the graphics bridge relies on.
 - `build/`: Generated binaries and final floppy image.
 - `.vscode/`: VS Code configuration files.
 - `Makefile`: Build automation.

@@ -5,7 +5,7 @@ Copia do subconjunto portatil do projeto
 desenhar sem reescrever um rasterizador do zero.
 
 - Origem: https://github.com/Gabryel-lima/gfx
-- Commit: `1ce47cbf9f3008dd57c644a6195183d78055f486`
+- Commit: `eed8e19db3e75d38d167a8b52565254b4fd9faa4`
 - Sincronizado em: 2026-09-06
 
 ## O que foi copiado, e por que so isso

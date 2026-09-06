@@ -232,8 +232,14 @@ static Vec4 project_vertex(Vec3 vertex, float angle, uint32_t width, uint32_t he
 
     out.x = (float)width  * 0.5f + x1 * scale;
     out.y = (float)height * 0.5f - y2 * scale;
+    /* Profundidade: o z de visao direto, e nao um z de NDC. Basta para o
+     * z-buffer porque a ordem se mantem — mais perto continua sendo menor. */
     out.z = view_z;
-    out.w = 1.0f;
+    /* w de clip, usado pelo rasterizador para corrigir a perspectiva na
+     * interpolacao. Aqui as cores sao constantes por face, entao a correcao
+     * nao muda um pixel; passar o valor certo mantem a demo alinhada com o
+     * contrato de gfx_raster.h em vez de depender do atalho w = 1. */
+    out.w = view_z;
     return out;
 }
 
