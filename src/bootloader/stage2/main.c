@@ -38,6 +38,13 @@ void _cdecl cstart(uint16_t bootDrive) {
                                       MEMORY_KERNEL_HEAP_SIZE))
         boot_fail("Kernel heap error");
 
+    /* O stage2 entrega o controle com o modo texto 80x25 ativo, então é ele
+     * que o boot_info descreve. Antes esses seis campos iam zerados, o que
+     * fazia o kernel ler "não há framebuffer" quando na verdade havia um —
+     * só não era gráfico. Ligar um modo gráfico aqui seria pior: o kernel
+     * perderia a saída de texto (panic, log, shell) logo no boot. Quem troca
+     * de modo é o kernel, em runtime, pelo trampolim de modo real
+     * (src/kernel/realmode.h + src/kernel/video.h). */
     MEMORY_BootInfo_Init(bootInfo,
                          bootDrive,
                          MEMORY_VIDEO_MODE_TEXT,
@@ -45,11 +52,11 @@ void _cdecl cstart(uint16_t bootDrive) {
                          &kernelAllocator,
                          (void far*)MEMORY_IO_BUFFER_ADDR,
                          MEMORY_IO_BUFFER_SIZE,
-                         0,
-                         0,
-                         0,
-                         0,
-                         0,
+                         MEMORY_TEXT_FRAMEBUFFER_ADDR,
+                         MEMORY_TEXT_FRAMEBUFFER_WIDTH,
+                         MEMORY_TEXT_FRAMEBUFFER_HEIGHT,
+                         MEMORY_TEXT_FRAMEBUFFER_PITCH,
+                         MEMORY_TEXT_FRAMEBUFFER_BPP,
                          0);
 
     printf("Memory map: %u entries, heap=%lx size=%lu\r\n",

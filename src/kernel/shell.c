@@ -7,6 +7,7 @@
 #include "include/string.h"
 #include "include/io.h"
 #include "include/serial.h"
+#include "include/cmd_video.h"
 
 #include "root/echo.h"
 
@@ -48,6 +49,8 @@ static int cmd_help(int argc, char **argv) {
     vga_puts("  ticks  - mostra ticks do PIT\n");
     vga_puts("  reboot - reinicia o sistema\n");
     vga_puts("  echo   - exibe texto (ex: echo Hello)\n");
+    vga_puts("  mode   - mostra ou troca o modo de video\n");
+    vga_puts("  gfxdemo- desenha um cubo com o rasterizador do gfx\n");
     return 0;
 }
 
@@ -101,6 +104,8 @@ static const cmd_entry_t cmd_table[] = {
     {"ticks",  cmd_ticks},
     {"reboot", cmd_reboot},
     {"echo",   echo},
+    {"mode",    cmd_video_mode},
+    {"gfxdemo", cmd_video_gfxdemo},
 };
 
 // Número de comandos na tabela (calculado automaticamente)

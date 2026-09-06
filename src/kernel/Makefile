@@ -5,8 +5,13 @@ CC       ?= gcc
 LD       ?= ld
 OBJCOPY  ?= objcopy
 
+# -I../../third_party/gfx/include: o nucleo portatil do gfx (matematica,
+# framebuffer, rasterizador) esta vendorizado la e compila com este mesmo
+# toolchain. Com -nostdinc, os <stdint.h>/<stddef.h> que ele inclui resolvem
+# contra os headers do proprio kernel em include/.
 CFLAGS   := -m32 -std=c11 -ffreestanding -nostdinc -nostdlib -fno-builtin \
-            -fno-stack-protector -fno-pie -Wall -Wextra -O2 -Iinclude
+            -fno-stack-protector -fno-pie -Wall -Wextra -O2 -Iinclude \
+            -I../../third_party/gfx/include
 LDFLAGS  := -m elf_i386 -T linker.ld --no-warn-rwx-segments
 
 # Arquivos fonte
@@ -14,7 +19,12 @@ BOOT_SRC    := boot.asm
 ENTRY_SRC   := entry.asm
 ISR_SRC     := isr_stubs.asm
 REALMODE_SRC := realmode.asm
-C_SOURCES   := kernel_main.c vga.c serial.c idt.c realmode.c video.c pic.c pit.c keyboard.c panic.c shell.c string.c unistd.c getopt.c root/echo.c
+# Nucleo do gfx vendorizado (third_party/gfx). Compila com as mesmas flags do
+# kernel; veja third_party/gfx/README.md.
+GFX_SOURCES := gfx_math.c gfx_raster.c gfx_framebuffer.c
+GFX_DIR     := ../../third_party/gfx/core
+
+C_SOURCES   := kernel_main.c vga.c serial.c idt.c realmode.c video.c kalloc.c fpu.c gfx_bridge.c cmd_video.c pic.c pit.c keyboard.c panic.c shell.c string.c unistd.c getopt.c root/echo.c
 
 # Artefatos intermediarios
 BOOT_BIN    := $(BUILD_DIR)/kernel/boot.bin
@@ -22,6 +32,7 @@ ENTRY_OBJ   := $(BUILD_DIR)/kernel/asm/entry.o
 ISR_OBJ     := $(BUILD_DIR)/kernel/asm/isr_stubs.o
 REALMODE_OBJ := $(BUILD_DIR)/kernel/asm/realmode.o
 C_OBJECTS   := $(patsubst %.c,$(BUILD_DIR)/kernel/c/%.o,$(C_SOURCES))
+GFX_OBJECTS := $(patsubst %.c,$(BUILD_DIR)/kernel/gfx/%.o,$(GFX_SOURCES))
 KERNEL_ELF  := $(BUILD_DIR)/kernel/kernel_c.elf
 KERNEL_CBIN := $(BUILD_DIR)/kernel/kernel_c.bin
 
@@ -47,8 +58,12 @@ $(REALMODE_OBJ): $(REALMODE_SRC) always
 $(BUILD_DIR)/kernel/c/%.o: %.c always
 	$(CC) $(CFLAGS) -c "$<" -o "$@"
 
+# Objetos do gfx vendorizado
+$(BUILD_DIR)/kernel/gfx/%.o: $(GFX_DIR)/%.c always
+	$(CC) $(CFLAGS) -c "$<" -o "$@"
+
 # Link ELF
-$(KERNEL_ELF): $(ENTRY_OBJ) $(ISR_OBJ) $(REALMODE_OBJ) $(C_OBJECTS)
+$(KERNEL_ELF): $(ENTRY_OBJ) $(ISR_OBJ) $(REALMODE_OBJ) $(C_OBJECTS) $(GFX_OBJECTS)
 	$(LD) $(LDFLAGS) -o "$@" $^
 
 # Extrai flat binary do ELF
@@ -64,6 +79,7 @@ always:
 	@mkdir -p $(BUILD_DIR)/kernel/asm
 	@mkdir -p $(BUILD_DIR)/kernel/c
 	@mkdir -p $(BUILD_DIR)/kernel/c/root
+	@mkdir -p $(BUILD_DIR)/kernel/gfx
 
 clean:
 	rm -rf $(BUILD_DIR)/kernel

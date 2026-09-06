@@ -9,6 +9,8 @@
 #include "include/shell.h"
 #include "include/realmode.h"
 #include "include/video.h"
+#include "include/kalloc.h"
+#include "include/fpu.h"
 
 /* Wrappers de IRQ que delegam para os drivers e enviam EOI */
 
@@ -74,13 +76,27 @@ void kernel_main(void) {
         vga_puts("[--] Trampolim de modo real indisponivel\n");
     }
 
-    /* 9. Mensagem de boas-vindas */
+    /* 9. FPU e memoria alta: pre-requisitos do caminho grafico. O rasterizador
+     *    do gfx trabalha em ponto flutuante, e um backbuffer de 32 bits nao
+     *    cabe nos 128 KiB de heap que o stage2 reserva abaixo de 1 MiB. */
+    if (fpu_init())
+        vga_puts("[OK] FPU x87 habilitada\n");
+    else
+        vga_puts("[--] FPU x87 ausente; o caminho grafico nao vai funcionar\n");
+
+    if (kalloc_init())
+        vga_printf("[OK] Memoria alta: base=0x%08x, %u KiB\n",
+                   kalloc_base(), kalloc_capacity() / 1024u);
+    else
+        vga_puts("[--] Nenhuma regiao utilizavel acima de 1 MiB\n");
+
+    /* 10. Mensagem de boas-vindas */
     vga_set_color(VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
     vga_puts("Bem-vindo ao AlmaOS!\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
     vga_puts("Digite 'help' para lista de comandos.\n\n");
 
-    /* 10. Shell interativo */
+    /* 11. Shell interativo */
     shell_init();
     shell_run();
 
