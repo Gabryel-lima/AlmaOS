@@ -7,6 +7,8 @@
 #include "include/keyboard.h"
 #include "include/panic.h"
 #include "include/shell.h"
+#include "include/realmode.h"
+#include "include/video.h"
 
 /* Wrappers de IRQ que delegam para os drivers e enviam EOI */
 
@@ -58,13 +60,27 @@ void kernel_main(void) {
     sti();
     vga_puts("[OK] Interrupcoes habilitadas\n\n");
 
-    /* 8. Mensagem de boas-vindas */
+    /* 8. Trampolim de modo real + consulta de video.
+     *    Depois do PIC porque realmode_int() mascara e restaura as IRQs. */
+    if (realmode_init()) {
+        vga_puts("[OK] Trampolim de modo real (BIOS int 10h)\n");
+        video_init();
+        if (video_vbe_available())
+            vga_printf("[OK] VBE %u.%u disponivel\n",
+                       (video_vbe_version() >> 8) & 0xFF, video_vbe_version() & 0xFF);
+        else
+            vga_puts("[--] VBE indisponivel; so VGA 13h\n");
+    } else {
+        vga_puts("[--] Trampolim de modo real indisponivel\n");
+    }
+
+    /* 9. Mensagem de boas-vindas */
     vga_set_color(VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
     vga_puts("Bem-vindo ao AlmaOS!\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
     vga_puts("Digite 'help' para lista de comandos.\n\n");
 
-    /* 9. Shell interativo */
+    /* 10. Shell interativo */
     shell_init();
     shell_run();
 

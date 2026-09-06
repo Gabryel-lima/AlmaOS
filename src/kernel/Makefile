@@ -13,12 +13,14 @@ LDFLAGS  := -m elf_i386 -T linker.ld --no-warn-rwx-segments
 BOOT_SRC    := boot.asm
 ENTRY_SRC   := entry.asm
 ISR_SRC     := isr_stubs.asm
-C_SOURCES   := kernel_main.c vga.c serial.c idt.c pic.c pit.c keyboard.c panic.c shell.c string.c unistd.c getopt.c root/echo.c
+REALMODE_SRC := realmode.asm
+C_SOURCES   := kernel_main.c vga.c serial.c idt.c realmode.c video.c pic.c pit.c keyboard.c panic.c shell.c string.c unistd.c getopt.c root/echo.c
 
 # Artefatos intermediarios
 BOOT_BIN    := $(BUILD_DIR)/kernel/boot.bin
 ENTRY_OBJ   := $(BUILD_DIR)/kernel/asm/entry.o
 ISR_OBJ     := $(BUILD_DIR)/kernel/asm/isr_stubs.o
+REALMODE_OBJ := $(BUILD_DIR)/kernel/asm/realmode.o
 C_OBJECTS   := $(patsubst %.c,$(BUILD_DIR)/kernel/c/%.o,$(C_SOURCES))
 KERNEL_ELF  := $(BUILD_DIR)/kernel/kernel_c.elf
 KERNEL_CBIN := $(BUILD_DIR)/kernel/kernel_c.bin
@@ -38,12 +40,15 @@ $(ENTRY_OBJ): $(ENTRY_SRC) always
 $(ISR_OBJ): $(ISR_SRC) always
 	$(ASM) -f elf32 "$<" -o "$@"
 
+$(REALMODE_OBJ): $(REALMODE_SRC) always
+	$(ASM) -f elf32 "$<" -o "$@"
+
 # C objects
 $(BUILD_DIR)/kernel/c/%.o: %.c always
 	$(CC) $(CFLAGS) -c "$<" -o "$@"
 
 # Link ELF
-$(KERNEL_ELF): $(ENTRY_OBJ) $(ISR_OBJ) $(C_OBJECTS)
+$(KERNEL_ELF): $(ENTRY_OBJ) $(ISR_OBJ) $(REALMODE_OBJ) $(C_OBJECTS)
 	$(LD) $(LDFLAGS) -o "$@" $^
 
 # Extrai flat binary do ELF
